@@ -1,0 +1,26 @@
+\begin{table}[]
+	\centering
+\caption{Estimated cost~(in USD) of synthesizing adapters between RC4 setup and encryption functions in OpenSSL and mbedTLS on an Amazon EC2 instance}
+\label{table:rc4-adapter-synthesis-cost}
+			\begin{tabular}{|l|c|c|c|c|c|}
+				\hline
+				                                                                                    &
+				\begin{tabular}[c]{@{}c@{}}setup \\ M $\leftarrow$
+				O\end{tabular} & \begin{tabular}[c]{@{}c@{}}setup \\ O
+				$\leftarrow$ M\end{tabular} & \begin{tabular}[c]{@{}c@{}}enc \\
+				M $\leftarrow$ O\end{tabular} & \begin{tabular}[c]{@{}c@{}}enc
+				\\ O $\leftarrow$ M\end{tabular} & Total   \\ \hline
+					\begin{tabular}[c]{@{}l@{}}Concrete \\ enum.-based \\
+					adapter\\ search\end{tabular} & \$9.17
+						& \$6.15
+						& \$6.29
+						& \$6.15
+						& \$27.76 \\ \hline
+						\begin{tabular}[c]{@{}l@{}}FuzzBALL-\\ based\\ adapter\\
+						search\end{tabular}        & \$8.76
+							& \$6.84
+							& \$9.51
+							& \$2.34
+							& \$27.45 \\ \hline
+						\end{tabular}
+					\end{table}

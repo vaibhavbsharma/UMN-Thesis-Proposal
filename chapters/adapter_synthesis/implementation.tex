@@ -1,0 +1,153 @@
+\section{Implementation}\label{sec:implementation}
+
+%\subsection{Tools}
+We implement adapter synthesis for Linux/x86-64 binaries using
+the symbolic execution tool FuzzBALL~\cite{fuzzball}, which is freely available~\cite{fuzzball-github}.
+%Symbolic execution determines what inputs to a program will cause certain behaviors.
+%The idea is to execute the program of interest with some concrete values replaced by symbolic variables, and to find satisfying assignments to those symbolic variables that cause the desired execution path to be explored.
+FuzzBALL allows us to explore execution paths through the target and
+adapted reference functions to (1) find counterexamples that invalidate previous candidate adapters and (2) find candidate adapters that create behavioral equivalence for the current set of tests. 
+%
+As FuzzBALL symbolically executes a program, it constructs and maintains Vine IR expressions using the BitBlaze~\cite{bitblaze-url} Vine library~\cite{bitblaze-vine} and interfaces with the STP~\cite{stp} decision procedure to solve path conditions.
+%
+We also evaluate adapter synthesis by replacing the symbolic execution-based implementation of adapter search with a concrete implementation that searches the adapter space in a random order.
+%
+\subsection{Test Harness}
+%
+To compare code for equivalence we use a test harness similar to the one used by Ramos et al.~\cite{Ramos:2011:PLE:2032305.2032360} to compare C functions for direct equivalence using symbolic execution.
+%
+The test harness exercises every execution path that passes first through the function, and then through the adapted reference function.
+%
+As FuzzBALL executes a path through the function, it maintains a path condition that reflects the branches that were taken.
+%
+As execution proceeds through the adapted reference function on an execution path, FuzzBALL will only take branches that do not contradict the path condition.
+%
+Thus, symbolic execution through the target and reference functions consistently satisfies the same path condition over the input.
+%
+Listing \ref{lst:test_harness} provides a representative test harness.
+%
+If the target is a code fragment instead of a function, its inputs $x_1$, ..., $x_n$ need to be written into the first $n$ general purpose registers available on the architecture.
+%
+Since the target code fragment may write into the stack pointer register ({\tt sp} on ARM), the value of the stack pointer also needs to be saved before executing the target code fragment and restored after the target code fragment has finished execution.
+%
+On line 2 the test harness executes
+\texttt{TARGET} with inputs $x_1$, ..., $x_n$ and captures its output in {\tt r1}.
+%
+If the target is a function, its outputs are its return value and values
+written to memory.
+%
+If the target is a code fragment, its output needs to be determined in a preprocessing phase.
+%
+One heuristic for choosing a code fragment\rq s output is to choose the last register that was written into by the code fragment.
+%
+On line 6, the test harness calls the adapted reference function \texttt{REF} with
+inputs $y_1$, ..., $y_m$, which are derived from $x_1$, ..., $x_n$ using
+an adapter \texttt{A}.
+%
+After executing {\tt REF}, the test harness adapts {\tt REF}\rq s return value using the return adapter {\tt R} and saves the adapted return value in {\tt r2}.
+%
+On line 7 the test harness branches on whether the results of the calls to the target and adapted reference code match.
+%
+\lstinputlisting[caption={Test harness}, label={lst:test_harness}]{chapters/adapter_synthesis/code_samples/compare.c}
+%
+
+We use the same test harness for both counterexample search~(called
+		\texttt{CheckAdapter} in Figure~\ref{fig:adapter_synthesis}) and
+adapter search~(called \texttt{SynthesizeAdapter} in
+		Figure~\ref{fig:adapter_synthesis}). 
+%
+During counterexample search, the inputs $x_1$, ..., $x_n$ are marked as
+symbolic and the adapters {\tt A} and {\tt R} are concrete.
+%
+FuzzBALL first executes the function using the symbolic $x_1$, ..., $x_n$.
+%
+It then creates reference function arguments $y_1$, ..., $y_n$ using the
+concrete adapter \texttt{A} and executes the reference function.
+%
+During adapter search, for each set of test inputs $x_1$, ..., $x_n$, FuzzBALL first executes the function concretely.
+%
+The adapter \texttt{A} is then marked as symbolic, and FuzzBALL then applies symbolic adapter formulas (described in \ref{sec:adapter_formulae}) to the concrete test inputs and passes these symbolic formulas as the adapted reference function arguments $y_1$, ..., $y_n$.
+%
+During counterexample search we are interested in paths that execute the ``Mismatch'' side, and during adapter search we are interested in paths that execute the ``Match'' side of the branch on line 7 of Listing \ref{lst:test_harness}.
+%
+For simplicity, Listing \ref{lst:test_harness} shows only the return values $r_1$ and $r_2$ as being used for equivalence checking.
+%
+%However, during symbolic execution we extend this test harness to do equivalence checking of other state information, including memory and system calls, when comparing the target and adapted reference code executions.
+%
+\subsection{Adapters as Symbolic Formulae}
+\label{sec:adapter_formulae}
+%
+% \lstinputlisting[label=lst:typeconv_adapter_formula,label={lst:typeconv_adapter_formula},caption={Vine IR formula for one type conversion operation and argument substitution}]{code_samples/typeconv_adapter_formula.c}
+% 
+We represent adapter families in FuzzBALL using Vine IR expressions involving symbolic variables.
+%
+For example, an adapter from the argument substitution family for the adapted
+reference function argument $y_i$ is represented by a Vine IR expression that indicates whether $y_i$ should be replaced by a constant value (and if so, what constant value) or an argument from the target function (and if so, which argument).
+%
+This symbolic expression uses two symbolic variables, \textit{y\_i\_type} and \textit{y\_i\_val}.
+%
+We show an example of an adapter from the argument substitution family represented as a symbolic formula in Vine IR in Listing \ref{lst:simple_adapter_formula}.
+%
+This listing assumes the target function takes three arguments, \textit{x1}, \textit{x2}, \textit{x3}.
+%
+This adapter formula substitutes the adapted reference function argument \textit{y1} with either a constant or with one of the three target function arguments.
+%
+A value of 1 in \textit{y\_1\_type} indicates \textit{y1} is to be substituted by the constant value given by \textit{y\_1\_val}.
+%
+If \textit{y\_1\_type} is set to a value other than 1, \textit{y1} is to be substituted by the target function argument at the position present in \textit{y\_1\_val}.
+%
+We constrain the range of values \textit{y\_1\_val} can take by adding side conditions. 
+%
+In the example shown in Listing \ref{lst:simple_adapter_formula}, when \textit{y\_1\_type} equals a value other than 1, \textit{y\_1\_val} can only equal 0, 1, or 2 since the target function takes 3 arguments.
+%
+% Symbolic formulae for argument substitution can be extended naturally to more complex adapter families by adding additional symbolic variables.
+% %
+% For example, consider the Vine IR formula shown in Listing~\ref{lst:typeconv_adapter_formula} which extends the formula in Listing~\ref{lst:simple_adapter_formula} to allow sign extension from the low 16 bits of a value.
+% %
+% Listing \ref{lst:typeconv_adapter_formula} begins in the same way as Listing \ref{lst:simple_adapter_formula} on line 1.
+% %
+% But, this time, if \textit{y\_1\_type} is 0, it performs argument substitution based on the value in \textit{y\_1\_val} on lines 3, 4.
+% %
+% If \textit{y\_1\_type} is any value other than 0, it performs sign extension of the low 16 bits in a value.
+% %
+% This value is chosen based on the position set in \textit{y\_1\_val} on lines 8, 9.
+% %
+% Notice lines 8, 9 are the same as lines 3, 4, which means the value, whose low 16 bits are sign-extended, is chosen in exactly the same way as argument substitution.
+%
+%
+\lstinputlisting[caption={Argument Substitution adapter}, label={lst:simple_adapter_formula}, style=nonumbers]{chapters/adapter_synthesis/code_samples/simple_adapter_formula.c}
+%
+During adapter search, Vine IR representations of adapted reference function arguments are placed into argument registers of the reference function before it begins execution, and placed into the return value register when the reference function returns to the test harness.
+%
+When synthesizing memory substitution adapters, Vine IR formulas allowing memory substitutions are written into memory pointed to by reference function arguments.
+%
+We use the registers \%rdi, \%rsi, \%rdx, \%rcx, \%r8, and \%r9 for function arguments and the register \%rax for function return value, as specified by the x86-64 ABI calling convention~\cite{x64-abi}.
+%
+We do not currently support synthesizing adapters between functions that use arguments passed on the stack, use variable number of arguments, or specify return values in registers other than \%rax.
+%
+%Our adapter synthesis tool does not support floating point type arguments, but it can be easily extended to allow symbolic formulae on floating point inputs.
+%
+%While we limit our implementation to synthesize adapters at the function interface level only up to six function arguments, we find a significant portion of the functions in the glibc library are still available for adapter synthesis. 
+%
+%For synthesizing memory substitution adapters, we write symbolic formulas which allow memory substitution into all addresses used by the target function, up to limited bytes.
+%
+%Using a smaller limit allows the symbolic formulas to be small and easy to solve but prevents larger structures from being adapted.
+%We do not support synthesizing adapters when the function interface of either the target or adapted reference function uses a value of floating point type.
+%
+\subsection{Equivalence checking of side-effects}
+\label{sec:eqchk-syscall}
+We allow target and reference code to make system calls and have side-effects on memory.
+%
+We record the side-effects of executing the target and adapted reference functions and compare them for equivalence on every execution path.
+%
+For equivalence checking of side-effects via system calls, we check the sequence of system calls and their arguments, made by both functions, for equality.
+%
+For equivalence checking of side-effects on concretely-addressed memory, we record write operations through both functions and compare the pairs of (address, value) for equivalence.
+%
+For equivalence checking of side-effects on memory addressed by symbolic values, we use a FuzzBALL feature called \textit{symbolic regions}. 
+%
+Symbolic address expressions encountered during adapted reference function execution are checked for equivalence with those seen during target function execution and mapped to the same symbolic region, if equivalent.
+%
+%We describe our implementation of equivalence checking on side-effects in more detail in Section \ref{subsec:eqchk-se} in the Appendix. 
+
+%\todo[inline]{Write subsections on equivalence checking for concretely-addressed memory and symbolic regions}

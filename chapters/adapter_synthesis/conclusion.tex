@@ -1,0 +1,52 @@
+\section{Conclusion}\label{sec:conclusion}
+%
+We presented a new technique to search for semantically-equivalent pieces of code which can be substituted while adapting differences in their interfaces.
+%
+This approach is implemented at the binary level, thereby enabling wider applications and consideration of exact run-time behavior.
+%
+We implemented adapter synthesis for x86-64 and ARM binary code.
+%
+We presented examples demonstrating applications towards adaptation modulo a bug, library replacement, and reverse engineering. 
+%
+We present an evaluation to find substitutable code within a library using the C library.
+%
+Our adapter families can be combined to find sophisticated adapters as shown by adaptation of RC4 implementations.
+%
+While finding thousands of functions to not be equivalent, our tool reported many instances of semantic equivalence, including C library functions such as \textit{ffs} and \textit{ffsl}, which have assembly language implementations.
+%
+Our comparison of concrete enumeration-based adapter search with binary
+symbolic execution-based adapter search allows users of adapter
+synthesis to choose between the two approaches based on the size of the adapter search space.
+%
+Our case studies show that adapter synthesis can be applied at scale to reverse engineer binary code using independently-developed codebases, even in the presence of very large adapter search spaces. 
+%
+Our implementation constitutes a novel use of  binary symbolic execution for synthesis.
+%
+Our results show that the CEGIS approach for adapter synthesis of binary code is feasible and sheds new light on potential applications such as searching for efficient clones, deobfuscation, program understanding, and security through diversity.
+%
+
+%    We have presented a new approach for finding code segments which are
+%    semantically substitutable despite having different interfaces.
+%    %
+%    The approach works by automatically finding the wrapper code (adapter)
+%    that would allow one code segment to replace another, or proving that
+%    no such adapter exists from a given grammar.
+%    %
+%    The technique is implemented using symbolic execution, so it considers
+%    precise code behavior without needing to execute every concrete
+%    function input separately, and it can search over binaries without
+%    requiring source code.
+%    %
+%    We implement the technique for x86-64 machine code, and apply it to
+%    over 13,000 function pairs within the C library on a Linux system,
+%    where it finds dozens of semantically-equivalent functions while
+%    proving that thousands of others are not equivalent.
+%    %
+%    Though this case study only illustrates one possible application of
+%    the technique, it already shows that it scales to run automatically
+%    over a large and diverse code base and finds adapters which we confirm
+%    to be correct.
+%    %
+%    This suggests that adapter synthesis is a promising approach for
+%    semantic clone search that accounts for the interface diversity of
+%    real software.

@@ -1,0 +1,106 @@
+\section{Limitations and Future Work}\label{sec:discussion}
+\label{sec:future_work}
+%
+%\todo{talk about inductive model checking}
+%
+%    To check equivalence of side-effects of the pair of functions on the operating system, our adapter synthesis tool checked for equality of a sequence of system call numbers.
+%    %
+%    Our equivalence checking can be extended to look for semantic, instead of exact, equivalence of system calls.
+%    %But, again, comparing system call arguments for equivalence is not always as simple as checking for exact equality.
+%    %For example, different invocations of the system call \textit{open} may be considered equivalent if they open the same file, even if the name of that file opened was read from a different address in memory.
+%    %
+%    In some cases, different system calls may be equivalent with certain parameters. 
+%    %
+%    For example, the \textit{creat} system call is equivalent to the \textit{open} system call with its second argument set to \textit{O\_CREAT|O\_WRONLY|O\_TRUNC}. 
+%    %
+%    Allowing for more relaxed notions of equivalence between system calls is non-trivial because of the many diverse side-effects that system calls can have on the filesystem and operating environment.
+%    %
+%    We can implement such side-effect equivalence checking by adding more thorough emulation of system call execution to FuzzBALL.
+%    
+%    Functions which use the same system calls can impose different preconditions on the system call arguments. 
+%    %
+%    e.g. we found that while the \textit{killpg} C library function internally calls the \textit{kill} function, it does this only if its first process group argument is greater than or equal to 0.
+%    %
+%    Adding knowledge of such preconditions to our adapter search can make our adapter synthesis implementation more robust but lies outside the scope of adapter synthesis.
+%    %
+%    While the presence of imposed pre-conditions can be detected from the implementation of a function, this problem becomes more difficult when functions use different values to represent the same semantic notion.
+%    %
+%    e.g. While \textit{isalpha} and \textit{isalnum} will return a non-zero value for an alphabetic character passed as an argument, they return different non-zero values to represent a boolean value \textit{true}. 
+%    %
+%    More expressive adapter grammars are required to be applied on the return value to allow synthesis of such post-conditions.
+
+
+We currently represent our synthesized adapters by an assignment of concrete values to symbolic variables and manually check them for correctness. 
+%
+Adapters could instead be automatically incorporated into binary code to replace the original function with the adapted function.
+%
+This would make the adapters more convenient to use and easier to test automatically.
+We plan to automate generation of such adapter code in the future.
+
+During every adapter search step, symbolic execution explores all feasible paths, including paths terminated on a previous adapter search step because they did not lead to a correct adapter.
+%
+Once a candidate adapter is found, the next iteration of adapter search can be accelerated by using information saved from the previous iteration.
+For example, adapter search can pick up symbolic execution from the last path in the previous iteration that led to a correct adapter.
+%
+A similar optimization can be utilized for concrete enumeration-based adapter
+search that uses the same random order of adapters during an adapter
+synthesis run. 
+%
+Concrete enumeration-based adapter search can be further accelerated by
+searching for adapters in parallel since checking one adapter is
+independent of checking other adapters.
+
+%While we tested our adapter synthesis tool using the type conversion and argument substitution adapter grammars on a large number of function pairs, similar tests can be done for the arithmetic, argument substitution with string length, character set translation adapter grammars.
+%
+%
+%
+%Another interesting set of tests is to synthesize adapters between semantically equivalent functions in libraries that provide similar functionality.
+%
+%E.g. musl and glibc, the GNU C library, implement the standard library functionality.
+%
+%Synthesizing adapters between similar libraries can allow developers or users to swap one library with another.
+%Preventing our memory-based equivalence checking from disqualifying adapters that find functional equivalence between functions that cleanup their writes to non-local memory would allow us to avoid false negatives during adapter search.
+%We can also extend our adapter synthesis towards allowing certain parts of data structures present as part of the system state to be specified as symbolic which would allow exploration of more execution paths through the target and reference functions.
+%
+%e.g. using \textit{fputc} as the reference function with the lock variable within the file stream object set as symbolic would allow exploration of execution paths which depend on the lock already being acquired on the file. 
+%
+% Though our supported adapters are already useful, there are several directions in which we plan to extend them.
+% %
+% A simple extension is to allow floating-point values to be used with our type-conversion and arithmetic adapters.
+% %
+% A broader extension is to allow the user to specify operations allowed in adapters and to automatically translate the user\rq s specification into symbolic formulas. 
+% %
+% However, this can lead to the user specifying adapter search spaces that are too large.
+% %
+% Therefore, we would need to balance flexibility of user-guided adapter specifications with providing helpful guidance to the user on keeping the adapter search space within practical limits.
+%
+%For example, the C library function \textit{ether\_ntoa} can be replaced by an adapter which allocates a static buffer and passes it as the second argument to \textit{ether\_ntoa\_r}.
+%
+%We can also easily extend our adapter grammar to allow operations on floating point values. 
+%adapter grammars which accommodate greater number of changes in function interfaces can also be developed and tested against functions in the C library.
+%
+%This would allow us to synthesize adapters between functions that implement mathematical formulas and between function pairs such as \textit{frexpf} and \textit{frexp}. 
+%
+%Adding type conversion operations to floating point adapter grammars would allow us to find argument substition adapters between function pairs such as \textit{frexpf} and \textit{frexp}.
+
+Our tool currently assumes that all behaviors of the target function must be matched, modulo failures such as null dereferences.
+%
+Using a tool like Daikon~\cite{ernst2007daikon} to infer the preconditions of a function from its uses could help our tool find adapters that are only correct for correct uses of functions.
+%
+This would allow us to find equivalence between functions like {\em isupper} and {\em islower}, which expect certain types of input.
+
+Adapter synthesis requires us to find if {\em there exists} an adapter such that {\em for all} inputs to the target function, the output of the target function and the output of the adapted reference function are equal. 
+%
+Thus the synthesis problem can be posed as a single query whose variables have this pattern of quantification (whereas CEGIS uses only quantifier-free queries).
+%
+We plan to explore using solvers such as Yices~\cite{yices} for this $\exists\forall$ fragment of first-order bitvector logic.
+
+Symbolic execution can only check equivalence over inputs of bounded
+size, though improvements such as path
+merging~\cite{KuznetsovKBC2012,AvgerinosRCB2014} can improve scaling.
+%
+Our approach could also integrate with any other equivalence checking
+approach that produces counterexamples, including ones that
+synthesize inductive invariants to cover unbounded
+inputs~\cite{SrivastavaG2009}, though we are not aware of any
+existing binary-level implementations that would be suitable.

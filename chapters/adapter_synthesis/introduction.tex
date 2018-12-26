@@ -1,0 +1,257 @@
+\section{Introduction}
+%
+Given the large corpus of software available today to an average programmer
+to reuse, it is desirable to reuse well-tested, bug-free chunks of
+code that implement some required functionality.
+%
+Finding such code can be difficult to automate, and there is no
+guarantee that the code found by such a search will have the exact
+interface the programmer intends to use. 
+%
+At such times, programmers find themselves writing wrapper code and
+creating unit tests to check if the wrapped code works as they intended.
+%
+In this paper, we improve upon a previously presented technique~\cite{icst-adaptersynth} that automates the process of
+finding functions that match the behavior specified by an existing
+function, while also synthesizing the necessary wrapper needed to handle 
+interface differences between the original and discovered functions.
+%
+Use cases for our improved technique include replacing insecure dependencies of off-the-shelf libraries with bug-free variants, reverse engineering binary-level functions by comparing their behavior to known implementations, and locating multiple versions of a function to be run in parallel to provide security through diversity~\cite{BorckBDHHJSS2016}.
+
+Our technique works by searching for a wrapper that can be added around one function's interface to make it equivalent to another function.
+%
+We consider wrappers that transform function arguments and return values.
+%
+For example, Listing~\ref{lst:isalpha} shows implementations of the \textit{isalpha} predicate, which checks if a character is a letter, in two commonly-used libraries.
+%
+Both implementations follow the ISO C standard specification of the \textit{isalpha} function, but the glibc implementation signifies the input is a letter by returning 1024, while the musl implementation returns 1 in that case.
+%
+The glibc implementation can be adapted to make it equivalent to the musl implementation by replacing its return value, if non-zero, by 1 as shown by the \textit{adapted\_isalpha} function.
+%
+This illustrates the driving idea of our approach: to check whether two functions, $f_1$ and $f_2$, have different interfaces to the same functionality, we can search for a wrapper that allows $f_1$ to be substituted by $f_2$.
+
+We refer to the function being wrapped around as the {\em reference} function and the function being emulated as the {\em target} function.
+%
+In the example above, the reference function is \textit{glibc\_isalpha} and the target function is \textit{musl\_isalpha}.
+%
+We refer to the wrapper code automatically synthesized by our tool as an {\em adapter}.
+%
+Our adapter synthesis tool searches in the space of all possible adapters allowed by a specified adapter family for an adapter that makes the behavior of the reference function $f_2$ equivalent to that of the target function $f_1$.
+%
+We represent that such an adapter exists by the notation $f_1 \leftarrow f_2$.
+%
+Note that this adaptability relationship is not symmetric: $f_1 \leftarrow f_2$ does not imply $f_2 \leftarrow f_1$. 
+%
+%In the \textit{isalpha} example, the other direction of adapter could be implemented by multiplying the musl implementation\rq s return value with 1024, but in general only one direction of adaptation may be possible.
+%
+To efficiently search for an adapter, we use counterexample guided inductive synthesis~(CEGIS)~\cite{Solar-LezamaTBSS2006}.
+%
+An adapter family is represented as a formula for transforming values controlled by parameters: each setting of these parameters represents a possible adapter.
+%
+Each step of CEGIS allows us to conclude that either a counterexample exists for the previously hypothesized adapter, or that an adapter exists for all previously found tests.
+%
+We use binary symbolic execution both to generate counterexamples and to find new candidate adapters; the symbolic execution engine internally uses a satisfiability modulo theories~(SMT) solver.
+%
+We also implement adapter search using a randomly-ordered enumeration of all possible adapters.
+%
+We always restrict our search to a specified finite family of adapters.
+\lstinputlisting[caption={musl and glibc implementations of the \textit{isalpha} predicate and a wrapper around the glibc implementation that makes it equivalent to the musl implementation},
+label={lst:isalpha}, style=nonumbers]{chapters/adapter_synthesis/code_samples/musl_glibc.c}
+%
+We implement adapter synthesis to adapt around inputs and outputs in registers and memory.
+%
+We demonstrate the use of adapter synthesis for the following applications.
+%
+\begin{itemize}
+\item We demonstrate the use of adapter synthesis for adaptably substituting
+a buggy function with its bug-free variant by finding 
+adaptable equivalence modulo a bug.
+%
+\item We demonstrate substitution of RC4 key structure
+setup and encryption functions in mbedTLS~(formerly PolarSSL) and
+OpenSSL by means of synthesizing adapters between their interfaces. 
+%
+\item We present an intra-library evaluation of adapter synthesis by
+evaluating two of our adapter families on more than 13,000 pairs of
+functions from the GNU C library.
+%
+\item We demonstrate the use of adapter synthesis for reverse engineering at
+scale using binary symbolic execution-based adapter synthesis.
+%
+We show that code fragments in a ARM-based 3rd party firmware image for
+the iPod Nano 2g device can be adaptably substituted by reference
+functions written for the VLC media player~\cite{vlc}.
+%
+In this evaluation, we complete more than 1.17 million synthesis tasks,
+with each synthesis task navigating an adapter search space of more than
+1.353 x $10^{127}$ adapters.
+%
+%Enumerating this search space concretely would take an infeasible amount of time~($10^{14}$ years).
+%
+We find our adapter synthesis implementation finds several instances of reference functions in the firmware image.
+\end{itemize}
+
+The rest of this chapter is organized as follows.
+%
+Section~\ref{sec:adapter_synthesis} presents our algorithm for adapter synthesis and describes our adapter families.
+%
+Section~\ref{sec:implementation} describes our implementation, and
+Section~\ref{sec:evaluation} presents examples of application of adapter synthesis, large-scale evaluations, and a comparison of two adapter search implementations.
+%
+Section~\ref{sec:discussion} discusses limitations and future work,
+Section~\ref{sec:related-work} describes related work, and
+Section~\ref{sec:conclusion} concludes.
+% 
+%  Previous introduction written by Stephen  
+%
+%    It is commonly observed that of the large amount of software being
+%    written, there are many instances of repeated functionality.
+%    %
+%    Such repetition can occur both within one program and between separate
+%    programs, and while some duplication occurs by syntactic copying
+%    (``cut and paste''), in other cases functionally equivalent code is
+%    developed independently by different developers.
+%    %
+%    Duplication can sometimes be a burden (because it bloats code and
+%    allows bugs fixed in one version to persist in another), but it can
+%    also be a resource that makes other useful tasks possible.
+%    %
+%    For instance diverse implementations of the same functionality can be
+%    used for fault tolerance, or if implementations differ in performance
+%    we can optimize a program by replacing a slower function with a faster
+%    one.
+%    
+%    The most familiar techniques for finding code duplication examine
+%    program source code, and search for code segments that are the same at
+%    the level of code syntax (syntactic clones).
+%    %
+%    But for many applications we wish to find functions that have the same
+%    behavior even if their implementations are syntactically different
+%    (semantic clones).
+%    %
+%    For security applications, or when operating on legacy software, it
+%    can also be desirable to find clones even when some or all of the
+%    software involved is available only it its final executable
+%    (``binary'') form.
+%    %
+%    A semantic rather than a syntactic approach is also natural for
+%    binaries because the compilation process can introduce many kinds
+%    instruction-level variation.
+%    %
+%    With these applications in mind we explore techniques for finding
+%    semantically-equivalent code at the binary level.
+%    
+%    The application that originally motivated us is using semantically
+%    equivalent code segments to make variants of a program with
+%    implementation diversity that can help it to withstand faults or even
+%    malicious attack.
+%    %
+%    This can be particularly effective if multiple diverse variants are
+%    executed together and checked for
+%    divergence~\cite{Cox:2006:NSS:1267336.1267344}.
+%    %
+%    Such a defense is stronger if the variants are more semantically
+%    diverse, but most techniques that automatically produce variant
+%    executables from a single source program affect only low-level
+%    features like memory layout~\cite{Larsen:2014:SAS:2650286.2650803},
+%    and so provide protection only against low-level attacks.
+%    %
+%    Finding usable alternative implementations in existing code bases is a
+%    promising direction for discovering semantic diversity that can
+%    provide more robust protection~\cite{BorckBDHHJSS2016}.
+%    
+%    A challenge for finding semantic equivalence is that code we would
+%    intuitively consider to implement the same functionality might have a
+%    different interface, especially if it was developed independently.
+%    %
+%    (For now we concentrate on code segments that implement functions, so
+%    the interfaces we consider are function interfaces.)
+%    %
+%    An equivalence checking technique that was only able to find
+%    implementations with exactly the same interface would miss many
+%    semantic clones.
+%    %
+%    Programmers typically bridge incompatible function interfaces by
+%    writing wrapper code that we call an {\em adapter}: a function that
+%    implements one interface in terms of another one by making small
+%    changes such as copying or reformatting data, or rearranging function
+%    arguments.
+%    %
+%    When we can write an adapter that wraps a function $f_2$ to make it
+%    equivalent to a function $f_1$, we write $f_1 \leftarrow f_2$.
+%    %
+%    The function $f_2$ which is inside the wrapper function we call the
+%    {\em inner function}, while the function $f_1$ whose functionality we
+%    want to emulate we refer to as the {\em target function}.
+%    %
+%    The combination of the adapter and the inner function, which is
+%    semantically equivalent to the target function, we call the {\em outer
+%      function}.
+%    
+%    This suggests that we would like to consider two functions to be
+%    semantically equivalent whenever such an adapter function might be
+%    written to replace one with the other.
+%    %
+%    Because such adapters have a stylized form and the specification in
+%    terms of function equivalence is precise, we observe that we can turn
+%    this intuition into an automated approach by applying program
+%    synthesis.
+%    %
+%    Given a pair of functions, our system searches over a space of
+%    possible adapter functions until it either finds an adapter that makes
+%    the outer function equivalent to the target function, or proves that
+%    no such adapter exists.
+%    %
+%    Though this basic approach could be applied equally well to source
+%    code or binary code, we implement it using binary-level symbolic
+%    execution to increase its applicability, including to systems written
+%    using a mixture of C and assembly language.
+%    
+%    It would be challenging to find a correct adapter in a single search,
+%    since the spaces of function inputs and possible adapters are in
+%    general both large, and an adapter must work for all inputs.
+%    %
+%    (From a logical perspective, this corresponds to the fact that the
+%    full problem has a quantifier alternation: we seek to show that {\em
+%      there exists} an adapter which works {\em for all} inputs.)
+%    %
+%    To make the search more tractable, we use the technique of
+%    counterexample-guided inductive synthesis (CEGIS) to split it into an
+%    alternation of two kinds of search.
+%    %
+%    Rather than demanding an adapter that works over all inputs from the
+%    start, our algorithm grows a finite set of test cases, searching at
+%    each step for an adapter that works for the current set of test cases,
+%    and then checking whether that particular adapter works for all
+%    inputs.
+%    %
+%    Both of these simpler search steps can be implemented with symbolic
+%    execution and quantifier-free SMT (satisfiability modulo theories)
+%    solving.
+%    
+%    A key factor in making this approach practical is choosing a space of
+%    possible adapters which is large enough to find many related
+%    functions, but limited enough that synthesis is tractable.
+%    %
+%    So we investigate a number of different adapter grammars and
+%    illustrate them with examples.
+%    %
+%    We have implemented out approach on top of an existing binary symbolic
+%    execution system, and we evaluate it with a large-scale case study
+%    looking for semantically-adaptable function pairs in the standard C
+%    library used on Linux (eglibc 2.19 from Ubuntu 14.04).
+%    
+%    The rest of this paper is organized as follows.
+%    %
+%    Section~\ref{sec:overview} describes more specifically the kind of
+%    adapters we search for, with examples.
+%    %
+%    Section~\ref{sec:adapter_synthesis} gives our algorithm for adapter
+%    synthesis and describes our adapter grammar.
+%    %
+%    Section~\ref{sec:implementation} describes our implementation, and
+%    Section~\ref{sec:evaluation} presents the C library case study.
+%    %
+%    Section~\ref{sec:discussion} discusses limitations and future work,
+%    Section~\ref{sec:related-work} describes related work, and
+%    Section~\ref{sec:conclusion} concludes.

@@ -1,0 +1,96 @@
+%\subsubsection{Algorithms for Adapter Synthesis}
+%\label{sec:algorithms}
+%Here we present the pseudocode for our adapter synthesis algorithm, which was summarized by Figure~\ref{fig:adapter_synthesis} in Section~\ref{sec:adapter_synthesis}. Algorithm~\ref{alg:adapter_search} presents the main adapter synthesis loop, Algorithm~\ref{alg:check_adapter} presents the \texttt{CheckAdapter} procedure that generates counterexamples, and Algorithm~\ref{alg:synthesize_adapter} presents the the \texttt{SynthesizeAdapter} procedure that generates candidate adapters. \texttt{CheckAdapter} and \texttt{SynthesizeAdapter} are both implemented as calls to a symbolic executor.
+
+\begin{algorithm}[ht]
+\LinesNumbered
+\small
+\SetNlSty{texttt}{[}{]}
+\SetKwData{CEList}{test-list}
+\SetKwData{CE}{counterexample}
+\SetKwFunction{SynthesizeAdapter}{SynthesizeAdapter}
+\SetKwFunction{CheckAdapter}{CheckAdapter}
+\SetKwInOut{Input}{Input}\SetKwInOut{Output}{Output}
+\Input{Target  $T$ as a code fragment or a function, reference function $R$, and adapter family $\mathcal{F}_\mathcal{A}$}
+\Output{(input adapter $\mathcal{A}_{in}$, output adapter $\mathcal{A}_{out}$) or \textit{null}}
+$\mathcal{A}_{in} \leftarrow$ default-input-adapter\;
+$\mathcal{A}_{out} \leftarrow$ default-output-adapter\;
+\CEList$\leftarrow$empty-list\;
+\While{true}{
+%input-args $\leftarrow$ list of symbolic variables;\\
+\CE $\leftarrow$ \CheckAdapter($\mathcal{A}_{in}$, $\mathcal{A}_{out}$);\\
+\eIf{\CE is null}{
+\Return{$(\mathcal{A}_{in}, \mathcal{A}_{out})$\;}
+}{
+\CEList.append(\CE)\;
+}
+$(\mathcal{A}_{in}, \mathcal{A}_{out}) \leftarrow$ \SynthesizeAdapter(\CEList)\;
+\If{$\mathcal{A}_{in}$ is null}{
+\Return{\textit{null}\;}
+}
+}
+\caption{Counterexample-guided adapter synthesis}
+\label{alg:adapter_synthesis}
+\end{algorithm}
+
+\begin{algorithm}[ht]
+\small
+\LinesNumbered
+\SetNlSty{texttt}{[}{]}
+\SetKwInOut{Input}{Input}
+\SetKwInOut{Output}{Output}
+\Input{Concrete input adapter $\mathcal{A}_{in}$ and output adapter $\mathcal{A}_{out}$}
+\Output{Counterexample to the given adapters or \textit{null}}
+\SetKwData{args}{args}
+\SetKwData{tOut}{target-output}
+\SetKwData{rOut}{reference-output}
+\args $\leftarrow$ symbolic\;
+\While{execution path available} {
+%execute a path through the target and inner functions using \args\;
+\tOut $\leftarrow$ execute $T$ with input \args\;
+\rOut $\leftarrow$ execute $R$ with input \textit{adapt($\mathcal{A}_{in}$, \args)}\;
+%solve for concrete \args which create behavioral difference between target and inner function using concrete \fAdapter\;
+\If{ ! equivalent(\tOut, adapt($\mathcal{A}_{out}$, \rOut)) }{
+\Return{concretize(\args)\;}
+}
+}
+\Return{null\;}
+\caption{\texttt{CheckAdapter} procedure used by Algorithm~\ref{alg:adapter_synthesis}. $T$ and $R$ are as defined in Algorithm~\ref{alg:adapter_synthesis}.}
+\label{alg:ce_search}
+\end{algorithm}
+
+%
+\begin{algorithm}[ht]
+\LinesNumbered
+\small
+\SetNlSty{texttt}{[}{]}
+\SetKwInOut{Input}{Input}
+\SetKwInOut{Output}{Output}
+\SetKwData{CEList}{test-list}
+\SetKwData{CE}{test}
+\SetKwData{tOut}{target-output}
+\SetKwData{rOut}{reference-output}
+\SetKwData{eqCounter}{eq-counter}
+\Input{List of previously generated counterexamples \CEList}
+\Output{(input adapter $\mathcal{A}_{in}$, output adapters $\mathcal{A}_{out}$) or \textit{null}}
+$\mathcal{A}_{in} \leftarrow$ symbolic input adapter\;
+$\mathcal{A}_{out} \leftarrow$ symbolic output adapter\;
+\While{execution path available} {
+\eqCounter $\leftarrow$ 0\;
+\While{\eqCounter $<$ length(\CEList)} {
+%execute a path through the target and inner functions using \CE\;
+\tOut $\leftarrow$ execute $T$ with input \CE\;
+\rOut $\leftarrow$ execute $R$ with input adapt($\mathcal{A}_{in}$, \CE))\;
+%solve for concrete \adapter which gives behavioral equivalence between target and inner function\;
+\eIf{ equivalent(\tOut, adapt($\mathcal{A}_{out}$, \rOut))}{
+\eqCounter $\leftarrow$ \eqCounter + 1\;
+} {break\;}
+}
+\If{ \eqCounter == length(\CEList) }{
+\Return{(concretize($\mathcal{A}_{in}$), concretize($\mathcal{A}_{out}$))\;}
+}
+}
+\Return{null\;}
+\caption{\texttt{SynthesizeAdapter} procedure used by Algorithm~\ref{alg:adapter_synthesis}. $T$ and $R$ are as defined in Algorithm~\ref{alg:adapter_synthesis}. The form of the resulting adapters ($\mathcal{A}_{in}$, $\mathcal{A}_{out}$) is dictated by $\mathcal{F}_\mathcal{A}.$}
+\label{alg:adapter_search}
+\end{algorithm}

@@ -1,0 +1,686 @@
+\section{Evaluation}\label{sec:evaluation}
+%
+In this section, we evaluate the performance of adapter synthesis and
+present its applications using case studies.
+%
+In Section~\ref{subsec:case-study-security}, we present an example of finding
+adaptable substitutability modulo a bug---enabling programmers to more easily replace buggy
+components of their code.
+%
+In Section~\ref{subsec:rc4-experiment}, we show how our technique can
+enable programmers to switch between different libraries with the same
+functionality.
+%
+In Section~\ref{subsec:c-library-evaluation}, we show that adapter
+synthesis can find adapters even within a library.
+%
+In Section~\ref{subsec:conc-search}, we compare symbolic execution-based adapter search
+with concrete enumeration-based adapter search.
+%
+Finally, in Section~\ref{subsec:eval_general}, we show how our technique can be used for
+reverse engineering.
+\subsection{Case Study: Security}\label{subsec:case-study-security}
+%
+\lstinputlisting[caption={Two implementations for mapping ordered keys, negative or positive, to values using a C array},
+label={lst:lookup}]{chapters/adapter_synthesis/code_samples/lookup.c}
+%
+%Data structures that map keys to their corresponding values are commonly found in modern programming languages~\cite{hashtbl-ocaml},~\cite{map-cpp}. 
+%
+%Support for such data structures is not part of the C language standard.
+%
+%Arrays in C provide a convenient and fast way for mapping a previously known number of integer keys to values.
+%
+%Implementation of data compression algorithms and signal processing implementations require constant-time lookup for negative and positive powers of values.
+%
+%In such situations, an array in C can be the perfect solution.
+%
+Consider a table implementing a function of a signed input.
+%
+For example, keys ranging from -127 to 127 can be mapped to a 255-element array.
+%
+Any key \textit{k} will then be mapped to the element at position \textit{k}+127 in this array.
+%
+We present two implementations of such lookup functions in Listing~\ref{lst:lookup}.
+%
+Both functions, \textit{lookup1} and \textit{lookup2}, assume keys ranging from $-$\textit{len}/2 to +\textit{len}/2 are mapped in the \textit{table} parameter with \textit{lookup1} being specific to tables of length 255.
+%
+However, \textit{lookup1} contains a bug caused by undefined behavior.
+%
+The return value of \textit{abs} for the most negative 32-bit integer~(-2147483648)~is not defined~\cite{gnu-abs}.
+%
+Given the most negative 32-bit integer, the eglibc-2.19 implementation of \textit{abs} returns that same 32-bit integer.
+%
+This causes the check on line 2 of Listing~\ref{lst:lookup} to not be satisfied, allowing execution to continue to line 5 and causing an out-of-bounds memory access.
+%
+\textit{lookup2} in Listing~\ref{lst:lookup} is a different implementation of an array-based lookup with a different interface than \textit{lookup1}.
+%
+Checking whether the key is in range is done differently in \textit{lookup2}, causing it to not have the memory access bug present in \textit{lookup1}.
+%
+For this reason, users of \textit{lookup1} may find it desirable to substitute the use of \textit{lookup1} with \textit{lookup2}.
+%
+Adapter synthesis can perform such a substitution by adapting \textit{lookup2} to \textit{lookup1} while simultaneously not adapting the out-of-bounds memory access in \textit{lookup1}.
+%
+Our adapter synthesis implementation synthesizes the correct argument substitution adapter in the \textit{lookup1} $\leftarrow$ \textit{lookup2} direction in about 8 minutes.
+%
+Synthesis of the correct adapter is slowed down by the presence of the \textit{table} pointer in the interfaces of \textit{lookup1} and \textit{lookup2}.
+%
+The adapter is shown on lines 15-18 of Listing~\ref{lst:lookup}.
+%
+This case study shows adapter synthesis can replace a buggy function
+with its bug-free variant by doing adaptation modulo a bug.
+%
+\subsection{Case Study: Library Replacement}\label{subsec:rc4-experiment}
+%
+To show that adapter synthesis can be applied to replace functionality
+from one library with that from another library, we adapt functions implementing RC4 functionality in mbedTLS and OpenSSL.
+\noindent
+\subsubsection{RC4 context initialization} The RC4 algorithm uses a
+variable length input key to initialize a table with 256 entries within
+the context argument.
+%
+Both cryptography libraries in our example, mbedTLS and OpenSSL, have their own implementation of this initialization routine.
+%
+Both initialization function signatures are shown in Figure \ref{fig:rc4setup_adapter}.
+%
+\begin{figure}[]
+	\centering
+	\caption{Argument substitution adapter to make \textit{RC4\_set\_key} adaptably equivalent to \textit{mbedtls\_arc4\_setup}}
+	\label{fig:rc4setup_adapter}
+	\includegraphics[width=\widthfactor\columnwidth]{chapters/adapter_synthesis/figures/rc4setup_adapter}
+\end{figure}
+%
+Executing each of these initialization routines requires 256 rounds of
+mixing bytes from the key string into the context.
+%
+%Each round requires two load and two store operations into an array with 256 entries.
+%
+The two initialization routines require the key length and key string arguments at different positions, and use different RC4 context structures (\textit{RC4\_KEY} in OpenSSL, \textit{mbedtls\_arc4\_context} in mbedTLS).
+%
+The RC4 context arguments contain three fields as shown in Figure \ref{fig:rc4_struct_adapter}.
+%
+\begin{figure}[]
+	\centering
+	\caption{Memory substitution adapter to make \textit{RC4\_KEY} adaptably equivalent to \textit{mbedtls\_arc4\_context}}
+	\label{fig:rc4_struct_adapter}
+	\includegraphics[width=\widthfactor\columnwidth]{chapters/adapter_synthesis/figures/rc4_struct_adapter}
+\end{figure}
+%
+The first two 4-byte fields are used to index into the third field, which is an array with 256 entries.
+%
+Each entry in the array is 4 bytes wide in OpenSSL and 1 byte wide in mbedTLS.
+%
+The correct adapter that adapts the OpenSSL context to the mbedTLS
+context~(mbedTLS $\leftarrow$ OpenSSL) performs two mapping operations:
+(1) it maps the first two mbedTLS context\rq s fields directly to the
+first two OpenSSL context\rq s fields and (2) it zero extends each 1 byte
+entry in the third field of the mbedTLS context to the corresponding 4
+byte entry in the third field of the OpenSSL context.
+%
+The correct adapter for making the \textit{RC4\_KEY} structure adaptably
+equivalent to the \textit{mbedtls\_arc4\_context} structure is shown in Figure \ref{fig:rc4_struct_adapter}.
+%
+The correct adapter in the reverse direction~(OpenSSL $\leftarrow$ mbedTLS) changes the second mapping operation to map the least significant byte of each 4 byte entry in the third field to the 1 byte entry in its corresponding position.
+
+Performing this adaptation with \textit{mbedtls\_arc4\_setup} and
+\textit{RC4\_set\_key}~(the RC4 context initialization functions in
+mbedTLS and OpenSSL respectively) requires adaptation of side-effects on memory
+because mixing of the key string into the context is the only output of these functions.
+%
+Since a memory substitution structure can be used both as input and as output, we have to perform the memory substitution adaptation at least twice.
+%
+First, the reference function may use the memory substitution structure as input.
+Hence, we need to adapt the initial byte values of the memory substitution structure to obtain the initial byte values to be used for the reference function.
+%
+Second, before running the reference function, the target function could have written to the memory substitution structure.
+Hence, we need to adapt side-effects of the target function on the memory substitution structure in order to compare them with corresponding side-effects on memory from the reference function.
+%
+The most general memory substitution adapter synthesis allows arbitrary
+numbers of 1, 2, 4, or 8 byte entries in each field of the
+264~($2 \times 4 + 256 \times 1$) byte mbedTLS context and 1032~($2 \times 4+256 \times 4$) byte OpenSSL
+context.
+%
+But this makes the search space of memory mappings very large.
+%
+We instead only explored adapters where the number of entries in each array was a power of 2.
+%
+While this reduction is useful in practice, it still gives us a search space of about 4.7 million possible memory substitutions in both directions of adaptation.
+
+Finally, memory substitution must be combined with argument substitution to synthesize adapters between \textit{mbedtls\_arc4\_setup} and \textit{RC4\_set\_key}.
+%
+This combination of argument substitution and memory substitution adapter families creates a search space of 5.593 billion adapters.
+%Vaibhav: I got this number of adapters by multiplying 4.7 million memory substitution adapters with the argument substitution number for f1nargs = 3, f2nargs = 3, const_lb = 1, const_ub = 1, return value substitution adapters = 8*f2nargs + 9 + (const_ub - const_lb + 1) + 1. We ran this adapter synthesis with the full return value substitution adapter. The exact calculation code is on mccarran:/export/scratch/vaibhav/tests/calc_num_adaptors.c
+%
+Our adapter synthesis tool figures out the correct argument,
+memory, and return value substitutions.
+%
+It finds adaptable equivalence in both directions of adaptation by checking equivalence between side-effects on the structure objects~(\textit{ctx} for \textit{mbedtls\_arc4\_setup}, \textit{RC4\_KEY} for \textit{RC4\_set\_key}).
+%
+The correct adapter for adaptably substituting the
+\textit{mbedtls\_arc4\_setup} function with the \textit{RC4\_set\_key}
+function is shown in
+Figure~\ref{fig:rc4setup_adapter}.
+%
+To setup adapter synthesis between these two function pairs (we synthesized adapters in both directions), we used a symbolic key string of length 1, and hence the synthesis tool correctly sets the key length argument to 1.
+%
+While we acknowledge that using an input string of length 1 is too small to be useful, we expect the adapter to be correct on strings of length greater than 1 in practice.
+%
+We also plan to integrate techniques such as path merging~\cite{KuznetsovKBC2012,AvgerinosRCB2014} to increase the bounds of inputs used in adapter synthesis.
+%
+While we used an input memory substitution size of 1032 symbolic bytes for memory substitution, both \textit{mbedtls\_arc4\_setup} and \textit{RC4\_set\_key} initialize this memory with concrete values in their implementation, thereby causing this adaptation to start with a much smaller symbolic state consisting of a single symbolic input byte.
+
+We present the time taken to synthesize adapters for RC4 setup function
+pairs in Table~\ref{table:rc4-adapter-synthesis-days}.
+%
+The execution time shown in Table~\ref{table:rc4-adapter-synthesis-days}
+for concrete enumeration-based adapter search is the average execution time
+taken for adapter synthesis over 10 correctly synthesized adapters for
+adapting RC4 setup functions.
+%
+We performed adapter synthesis using concrete enumeration-based adapter
+search 10 times because concrete enumeration-based adapter search
+traverses the adapter space in a random order.
+%
+Using the execution times shown in Table~\ref{table:rc4-adapter-synthesis-days}
+and the observation that our adapter synthesis never used more than 1 CPU core
+and 4 GB of RAM, we estimated~\cite{amazon-ec2-pricing} the cost of
+this computation on a Amazon EC2 instance~(t2-medium).
+%
+Table~\ref{table:rc4-adapter-synthesis-cost} shows these estimated costs.
+%
+These costs suggest that automated
+adapter search is likely competitive with paying a human programmer to find
+and verify the correctness of an adapter at the binary level.
+%
+The time required for adapter synthesis can be
+further reduced by parallelizing the adapter search in concrete
+enumeration and reusing the state of adapter search in FuzzBALL-based
+adapter search.
+%
+We discuss this further in Section~\ref{sec:future_work}.
+%
+%Thus, we combined the memory substitution adapter with the argument substitution adapter family to synthesize adaptable equivalence between the RC4 setup functions.
+%
+\noindent
+%
+\input{chapters/adapter_synthesis/tables/rc4-adapter-synthesis-days}
+\input{chapters/adapter_synthesis/tables/rc4-adapter-synthesis-cost}
+%
+\subsubsection{RC4 encryption} The RC4 encryption functions in mbedTLS and
+OpenSSL take 4 arguments each, three of which are pointers to the RC4
+context, the input key string, and the output string, as shown in
+Figure~\ref{fig:rc4-encrypt-mo}.
+%
+\begin{figure}[]
+	\centering
+	\caption{Adapter performing argument and memory substitution to make
+	\textit{mbedtls\_crypt} in the mbedTLS library adaptably substitutable
+	by \textit{RC4} in OpenSSL}
+	\label{fig:rc4-encrypt-mo}
+	\includegraphics[width=\widthfactor\columnwidth]{chapters/adapter_synthesis/figures/rc4-encrypt-mo}
+\end{figure}
+%
+These functions use the RC4 context as input, causing the initial symbolic state to consist of 1032 symbolic bytes for memory substitution and one symbolic byte for the input string.
+%
+These functions both read from and write to the RC4 context, making
+two memory substitution adaptations necessary.
+%
+These functions also encrypt every byte of the input string using a loop where the length of the input string is given as a parameter to the function.
+%
+Since all arguments to the reference function are symbolic, using a symbolic formula for the length of the input string can easily cause the loop bound to be very large, especially if the symbolic formula for the length allows the possibility of the length being equal to one of the pointer arguments to the reference function.
+%
+To avoid the encryption loop in the reference function from executing too many times, we restricted every instruction in the reference function to be executed at most twice.
+%
+Finally, because these functions write to an output string, it is
+necessary for us to have memory side-effects equivalence checking to
+capture outputs that are not part of the return value.
+
+The adapter search space in this case consists of $1.792 \times 10^{12}$ adapters.
+%Vaibhav: I got this number by by multiplying 4.7 million memory substitution adapters with the argument substitution number for f1nargs = 4, f2nargs = 4, const_lb = 0, const_ub = 5, return value substitution adapters = 8*f2nargs + 9 + (const_ub - const_lb + 1) + 1. We ran this adapter synthesis with the full return value substitution adapter. The exact calculation code is on mccarran:/export/scratch/vaibhav/tests/calc_num_adaptors.c 
+%
+The correct adapter for making the \textit{RC4} method adaptably
+equivalent to \textit{mbedtls\_arc4\_crypt} is shown in Figure
+\ref{fig:rc4-encrypt-mo}.
+%
+Our adapter synthesis tool finds the correct argument and memory
+substitution adapters in both directions of adaptation.
+%
+Tables~\ref{table:rc4-adapter-synthesis-days},~\ref{table:rc4-adapter-synthesis-cost}
+show the time taken for and estimated cost of adapter synthesis between
+the RC4 encryption functions in OpenSSL and mbedTLS.
+%
+Once again, the execution time shown in Table~\ref{table:rc4-adapter-synthesis-days}
+for concrete enumeration-based adapter search is the average execution time
+taken for adapter synthesis over 10 correctly synthesized adapters.
+%
+We verified the correctness of our adapted context structures by using self-tests present in mbedTLS and OpenSSL.
+%
+%Given the design of the RC4 encryption algorithm, we do not expect the correctness of our adapters to change for longer input strings.
+%
+\noindent
+\subsubsection{On improving memory substitution performance} On
+combining the memory substitution adapter family with argument and
+return value substitution, our adapter synthesis tool encountered a
+significant slowdown with both RC4 context initialization and encryption.
+%
+This can be attributed in part to the encoding of memory substitutions in our tool.
+%
+We enumerate all possibilities of memory substitutions into the formula of every byte in the memory substitution structure, causing the symbolic formulas to be very large.
+%
+We plan to encode the memory substitution adapter more efficiently in the future to make better use of existing solvers.
+%
+Another significant cause of the slowdown, in the case of RC4 context initialization, is the slow symbolic execution of 256 rounds of key mixing, once in the target and once in the reference function, because of two symbolic loads and two symbolic stores to memory on every round of key mixing.
+%
+We plan to integrate loop summarization~(for example, as described by
+Godefroid et al.~\cite{godefroid2011}), and use the theory of arrays for symbolically-indexed memory accesses to speed up this symbolic execution in the future.
+%
+In the case of RC4 encryption, since we have to adapt the memory substitution structures twice (once for input and once for output) we have to present large formulas to the solver at least twice on every execution path with each query taking a few seconds.
+%
+This large symbolic state is the cause of significant slowdown during RC4 encryption adapter synthesis.
+%
+We plan to explore concretization heuristics of symbolic bytes in the future to reduce the number of solver invocations made during RC4 encryption adapter synthesis.
+%
+\noindent
+\subsubsection{RC4 adapter verification using nmap} We verified the
+correctness of our RC4 memory substitution adapter using nmap with the setup shown in Figure \ref{fig:nmap_struct_adapter}.
+%
+\begin{figure}[]
+	\centering
+	\caption{nmap using RC4 encryption in mbedTLS instead of OpenSSL}
+	\label{fig:nmap_struct_adapter}
+	\includegraphics[width=\widthfactor\columnwidth]{chapters/adapter_synthesis/figures/nmap_struct_adapter}
+\end{figure}
+%
+We created adapted versions of the OpenSSL RC4 setup and encryption
+functions that internally use the mbedTLS context adapted to the OpenSSL
+context.
+%
+On a 64-bit virtual machine running Ubuntu 14.04, we compiled the adapted setup and encryption functions into a shared library and setup a local webserver, which communicated over port 443 using the \textit{RC4+RSA} cipher.
+%
+We used the stock nmap binary to scan our localhost and injected our specially created shared library using the \textit{LD\_PRELOAD} environment variable.
+%
+The preloading caused the RC4 functions in our shared library to be executed instead of the ones inside OpenSSL.
+%
+The output of nmap, run with preloading our specially created shared library which used the OpenSSL $\leftarrow$ mbedTLS structure adapter, was the same as the output of nmap when using the system OpenSSL library.
+%
+\subsection{Intra-library Adapter Synthesis}
+\label{subsec:c-library-evaluation}
+%
+The previous section showed an application of adapter synthesis where the target and reference functions came from
+independently-developed implementations.
+%
+But, adapter synthesis can also be useful in cases where the target and reference functions were developed within the same
+library.
+%
+Synthesizing adapters between binary functions in the same library can expose important relations between adaptably
+substitutable functions that may not be known to users of the library.
+%
+It can show relations between functions, by, for example showing that one function can be adaptably
+implemented in terms of another.
+%
+Verifying such relations between functions from their binary implementation can provide the users of the library a
+more detailed picture of the function\rq s behavior.
+%
+In libraries with a large interface, such as the Ubuntu 14.04 system C library, where it can be challenging to manually identify
+adaptability relations between functions, performing automated intra-library adapter synthesis can be particularly
+useful.
+%
+\subsubsection{Setup}
+%
+We evaluated our adapter synthesis tool on the system C library available on Ubuntu 14.04~(eglibc 2.19).
+%
+The C library uses a significant amount of inlined assembly, for instance, the \textit{ffs}, \textit{ffsl}, \textit{ffsll} functions, which
+motivates automated adapter synthesis at the binary level.
+%
+We enumerated 1316 exported functions in the library in the order they
+appear, which caused functions that are defined in the same source files
+to appear close to each other.
+%
+Considering every function in this list as the target function, we chose five functions that appear above and below it as 10 potential reference functions.
+%
+These steps gave us a list of 13130~($10\times 1316 - 2 \times \sum_{i=1}^5 i$) pairs of target and reference functions.
+%since the first five and the last five target functions 
+%had less than five potential semantically-equivalent reference functions. 
+%
+We used the argument substitution and type conversion adapter families combined with the return value adapter family because these families scale well and are widely applicable.
+%
+We ran our adapter synthesis with a 2 minute timeout on a machine running CentOS 6.8 with 64-bit Linux kernel version 2.6.32 using 64 GB RAM and a Intel Xeon E5-2680v3 processor.
+%
+To keep the running time of the entire adapter synthesis process within practical limits, we configured FuzzBALL to use a 5 second SMT solver timeout and to consider any queries that trigger this timeout as unsatisfiable.
+%
+We limited the maximum number of times any instruction can be executed to 4000 because this allowed execution of code which loaded library dependencies.
+%
+We limited memory regions to be symbolic up to a 936 byte offset limit (the size of the largest structure in the library interface) and any offset outside this range was considered to contain zero.
+%
+\subsubsection{Results}
+%
+Table~\ref{table:libc-evaluation} summarizes the results of searching for argument substitution and type conversion adapters with a return value adapter within the 13130 function pairs described above.
+%
+The similarity in the results for the type conversion adapter family and argument substitution adapter family arises from the similarity of these two families.
+%
+%We synthesized the argument substitition adapter, with and without type conversion, along with the return value adapter.
+%However, trying to synthesize an adapter using a simpler grammar translates into simpler queries for the solver, which in turn, results in the adapter synthesis tool concluding with a result of equivalence or the lack of it within the two minute hard timeout.
+%
+%For about 69\% of the 13130 function pairs, our synthesis tool concluded that functional equivalence cannot be created between the target and reference functions for the chosen adapter grammar.
+%
+%Our adapter synthesis tool timed out for about 21\% of the function pairs.
+%
+The most common causes of crashing during execution of the target function were missing system call support in FuzzBALL and incorrect null dereferences~(caused due to lack of proper initialization of pointer arguments).
+%
+The timeout column includes all function pairs for which we had a solver timeout~(5 seconds), hit the iteration limit~(4000), or reached a hard timeout~(2 minutes).
+%
+The search terminated without a timeout for 70\% of the function pairs, which reflects a complete exploration of the space of symbolic inputs to a function, or of adapters.
+%Because our test harness executes the target function first, in some cases, FuzzBALL failed to execute any execution paths to completion before starting execution of the reference function.
+%
+%While missing system call functionality in FuzzBALL was one cause for these failures, FuzzBALL often incorrectly classified pointer argument dereferences in the target function as null dereferences which caused the execution path to terminate.
+%
+%Another cause of failure to execute any execution paths through the target function to completion was the iteration limit of 4000 we used during our experiments.
+%
+%Our adapter synthesis tool reports 391 and 392 adapters for the argument substition grammar without type conversion and with type conversion respectively.
+%
+%
+%
+%We present the true positives found by our C library evaluation in the next subsection.
+%
+%But, during the last counter-example search step for the reported adapter, not every execution path completed execution through the target function.
+%
+%If a counter-example search for an adapter finishes executing the target function during every execution path and still fails to find a counter-example, it guarantees that no 
+%
+%Therefore, we report the number of adapters - 175 out of 391 in case of simple and 174 out of 392 in case of type conversion adapters - for which every execution path during the the final counter-example search step completed execution through the target function.
+
+% One of the the most interesting conclusions from our adapter synthesis tool
+% was the adapters reported between the 13130 function pairs, of which
+% 2.8\% and 2.7\% were reported to have an adapter when using the argument
+% substitution grammar without type conversion and with type conversion respectively.
+%
+\begin{table}[t]
+	\centering
+	\caption{Adapter Synthesis over 13130 function pairs without memory-based equivalence checking}
+	\label{table:libc-evaluation}
+	\begin{tabular}{|l|l|l|l|l|l|}
+		\hline
+		\begin{tabular}[c]{@{}l@{}}adapter \\ type\end{tabular}     &
+		Inequiv. & \begin{tabular}[c]{@{}l@{}}adapters\\ Found\end{tabular}
+		& Timeout & \begin{tabular}[c]{@{}l@{}}Target \\ function\\
+		crashed\end{tabular} \\ \hline
+		\begin{tabular}[c]{@{}l@{}} arg. sub.\end{tabular} & 8887
+		& 382 & 3014 &
+		847 \\
+		\hline
+		type conv.  & 8909
+		& 383 & 2989 &
+		849 \\
+		\hline
+	\end{tabular}
+\end{table}
+%
+Since there is no ground truth, we manually corroborated the results of our evaluation by checking the C library documentation and source code.
+%
+Our adapter synthesis evaluation on the C library reported 30 interesting true positives shown in Table~\ref{table:libc-adapters}.
+The remaining adapters found were correct, but trivial.
+The first column in Table~\ref{table:libc-adapters} shows the function pair between which an adapter was
+found (with the number of arguments) and the second
+column shows the adapter.
+We use the following notation to describe adapters in a compact way.
+%
+$f_1$ $\leftrightarrow$ $f_2$ means $f_1$ $\leftarrow$ $f_2$ and $f_2$ $\leftarrow$ $f_1$.
+%
+\# followed by a number indicates reference argument substitution by a target argument, while other numbers indicate constants.
+%
+X-to-YS represents taking the low X bits and sign extending them to Y bits, X-to-YZ represents a similar operation using zero extension.
+\input{chapters/adapter_synthesis/adapter_results_1}
+
+The last three rows shown in Table \ref{table:libc-adapters} shows three arithmetic adapters found within the C library using partial automation.
+%
+The functions \textit{isupper}, \textit{islower}, \textit{kill} have assumptions about conditions that will be satisifed by inputs given to them.
+% 
+We synthesized the correct adapters by writing wrappers containing preconditions around these three functions. %\textit{isupper}, \textit{islower}, \textit{kill} functions.
+%
+\subsection{Comparison with Concrete Enumeration-based Adapter Search}
+\label{subsec:conc-search}
+For every adapter family that we have discussed, the space of possible adapters is finite.
+%
+So instead of using symbolic execution for adapter search, we can find candidate adapters by enumerating concrete adapters until we find one that produces equal side-effects and return values for all previously-found tests.
+%
+We implement concrete enumeration-based adapter search in C for all the adapter families described in Section~\ref{sec:adapter_synthesis}.
+%
+We use the Pin~\cite{pin} framework for checking side-effects on memory and system calls for equality.
+%
+To prevent adapter search time from depending on the order of enumeration, we randomize the sequence in which adapters are generated, ensuring that every adapter had the same probability of being generated.
+%
+For the adaptable function pairs reported in Section~\ref{subsec:c-library-evaluation}, we synthesized adapters from the type conversion adapter family using both the concrete enumeration- and symbolic execution-based adapter search implementations and captured the total adapter search time.
+%
+We also counted the size of the adapter search space for every adaptation.
+%
+In some cases, the adapter search space was too large to be concretely enumerated.
+%
+For example, the adapter search space for the \textit{killpg} $\leftarrow$ \textit{kill} adapter consists of 98.1 million arithmetic adapters.
+%
+In such cases, we reduced the size of the search space by using smaller constant bounds.
+%
+Based on the size of adapter search space, we compared the total adapter search times for both adapter search strategies.
+%
+We present the results from this comparison in Figure~\ref{fig:conc_vs_se}.
+%
+\begin{figure}[t]
+	\centering
+	\caption{Comparing concrete enumeration-based adapter search with binary
+	symbolic execution-based adapter search for adapters presented in
+	Section~\ref{subsec:c-library-evaluation}}
+	\label{fig:conc_vs_se}
+	\includegraphics[width=\widthfactor\columnwidth]{chapters/adapter_synthesis/figures/conc_vs_se}
+\end{figure}
+%
+For concrete enumeration-based adapter search, Figure~\ref{fig:conc_vs_se} shows the time required to find an adapter has a consistent exponential increase with an increase in the size of adapter search space.
+%
+But when using binary symbolic execution-based adapter search,
+Figure~\ref{fig:conc_vs_se} shows a much slower increase in time
+required to find the adapter.
+%
+This occurs because symbolic execution is less
+affected by an increase in the size of the adapter search space
+due to an increase in the number of arguments and the number of
+possible constants in the adapter family.
+%
+\subsection{Large-Scale Reverse Engineering}
+\label{subsec:eval_general}
+In this section, we show how adapter synthesis can be used for reverse engineering.
+Our goal is to understand the behavior of fragments of binary code by synthesizing adapters between those fragments and reference functions with known behavior.
+We evaluate on binary code fragments taken from a ARM firmware image and reference functions
+chosen from the source code of a popular media player.
+\subsubsection{Code fragment selection}
+Rockbox~\cite{rockbox} is a free replacement 3rd party firmware for digital music players.
+%
+We used a Rockbox image compiled for the iPod Nano (2g) device, based on the 32-bit ARM architecture, and disassembled it.
+%
+We dissected the firmware image into code fragments using the following rules:
+%
+(1) no code fragment could use memory, stack, floating-point, coprocessor, or supervisor call instructions,
+%
+(2) no code fragment could branch to an address outside itself,
+%
+(3) the first instruction of a code fragment could not be conditionally executed.
+
+The first rule disallowed code fragments from having any inputs from/outputs to memory, thereby allowing us to use the 13 general purpose registers on ARM as inputs.
+%
+The second rule prevented a branch to an invalid address.
+%
+ARM instructions can be executed based on a condition code specified in the instruction. If the condition is not satisfied, the instruction is turned into a {\tt noop}.
+%
+The third rule disallowed the possibility of having code fragments that begin with a {\tt noop} instruction, or whose behavior depends on a condition.
+%
+The outputs of every code fragment were the last (up to) three registers written to by the code fragment.
+%
+This caused each code fragment to be used as the target code region up to three times, once for each output register.
+%
+This procedure gave us a total of 183,653 code regions, with 61,680 of them consisting of between 3 and 20 ARM instructions.
+
+To evaluate which code fragments could be synthesized just with our
+adapter family without a contribution from a reference function, we
+checked
+which of these 61,680 code fragments could be adaptably substituted by a reference function that simply returns one of its arguments.
+%
+Intuitively, any code fragment that can be adaptably substituted by an
+uninteresting reference function must be uninteresting itself, and so
+need not be considered further.
+%
+We found 46,831 of the 61,680 code fragments could not be adaptably
+substituted by our simple reference function, and so we focused our
+further evaluation on these 46,831 code fragments that were between 3
+and 20 ARM instructions long and non-trivial.\\
+%
+\subsubsection{Reference functions}
+Since our code fragments consisted of between 3 and 20 ARM instructions, we focused on using reference functions that can be expressed in a similar number of ARM instructions.
+%
+We used the source code of version 2.2.6 of the VLC media player~\cite{vlc} as the codebase for our reference functions.
+%
+We performed an automated search for functions that were up to 20 lines of source code.
+%
+This step gave us a total of 1647 functions.
+%
+Similar to the three rules for code fragment selection, we discarded functions that accessed memory, called other VLC-specific functions, or made system calls to find 24 reference functions.
+%
+Other than coming from a broadly similar problem domain (media
+players), our selection of reference functions was independent of the
+Rockbox codebase, so we would not expect that every reference function
+would be found in Rockbox.
+
+\subsubsection{Results}
+We used the type conversion adapter family along with the return value
+substitution family, disallowing return value substitution adapters
+from setting the return value to be a type-converted argument of the
+reference function (which would lead to uninteresting adapters).
+%
+We allowed the reference function arguments to be replaced by
+unrestricted 32-bit constants, and we assumed each code segment takes
+up to 13 arguments.
+%
+The size of this adapter search space can be calculated using the following formula:
+\[8 \times \sum_{k=0}^{k=13} (2^{32})^{13-k} \times \comb{13}{k} \times \perm{13}{k} \times 8^k \]
+%
+The first multiplicative factor of 8 is due to the 8 possible return value substitution adapters.
+%
+The permutation and combination operators occur due to the choices of
+arguments for the target code fragment and reference functions~(we
+assumed both have 13 arguments since most general-purpose registers can
+be used as input in an arbitrary code fragment).
+%
+The final $8^k$ represents the 8 possible type conversion operators that a type conversion adapter can apply.
+%
+The dominant factor for the size of the adapter search space comes from the size of the set of possible constants.
+%
+Our adapter family used unrestricted 32-bit constants, leading to a constants set of size $2^{32}$.
+
+With this adapter family set up, we ran adapter synthesis trying to adaptably substitute each of the 46,831 code fragments by each reference function.
+%
+This gave us a total of 1,123,944~($46831 \times 24$) adapter synthesis tasks, with each adapter synthesis search space consisting of $1.353 \times 10^{127}$ adapters, too large for concrete enumeration.
+%
+%This calculation is using 10000 adapters concretely enumerated per second, which is a loose upper bound on what we observed when doing concrete adapter enumeration for popcnt.
+%
+We set a 5 minute hard time limit and a total memory limit of 2 GB per adapter synthesis task.
+%
+We split the adapter synthesis tasks for each reference function into 32 parallel jobs, creating a total of 768~($32 \times 24$) parallel jobs.
+%
+We ran our jobs on a machine cluster running CentOS 6.8 with 64-bit Linux kernel version 2.6.32 and Intel Xeon E5-2680v3 processors.
+%
+We present our results in Table~\ref{table:general}.
+%
+%The full set of results is presented in Section~\ref{sec:all_tables}.
+%
+%\input{chapters/adapter_synthesis/revengg_all_tables}
+%
+\input{chapters/adapter_synthesis/tables/revengg_general_compact}
+The first column shows the reference functions chosen from the VLC media player source code.
+%
+The \textit{\#(full)} column reports how many code fragments were found to be adaptably substitutable~(represented by the value for \textit{\#}), and how many of those exploited the full generality of the reference function~(represented by the value of \textit{full}).
+%
+We report average number of steps and average total running time in the \textit{steps} and \textit{total time} columns respectively.
+%
+\subsubsection{Clustering using random tests} For every target code fragment and reference function pair, we can either find an adapter, find the fragment to not be adaptably substitutable, or run out of time.
+%
+Our adapter synthesis tool found adaptable substitution using 18 out of the 24 reference functions.
+%
+For every reference function, we clustered its adapted versions using 100,000 random tests. All adapted versions of a reference function that report the same output for all inputs were placed in the same cluster.
+%
+The number of clusters is reported in the \textit{\#clusters} column.
+%
+For each reference function, we then manually examined these clusters to judge which adapted versions used the complete functionality of that reference function; these are the cases where describing the functionality of the target fragment in terms of the reference function is mostly likely to be concise and helpful.
+%
+This took us less than a minute of manual effort for each reference function because we understood the intended semantic functionality of every reference function~(we had its source code).
+%
+We found instances of adapters using the full generality of the reference function for 11 reference functions.
+%
+Reference functions for which we found no use of full generality are omitted in Table~\ref{table:general}.
+%
+\begin{figure}
+	\centering
+	\includegraphics[width=\widthfactor\columnwidth]{chapters/adapter_synthesis/figures/clamp_partial_order}
+	\caption{Subset of partial order relationship among adapted clamp instances}
+	\label{fig:clamp_partial_order}
+\end{figure}
+We found that a majority of our generated adapters exploit specific functionality of the reference functions.
+%
+We explored this observation further by manually summarizing the semantics of the 683 adapters reported for {\tt clamp}.
+%
+We found that these 683 adapters have a partial order between them created by our adapter families of type conversion and return value substitution.
+%
+We present a subset of this partial order as a Hasse diagram in
+Figure~\ref{fig:clamp_partial_order} with the most general
+implementation of {\tt clamp} as the topmost node and functions that use
+the most
+specific instances of {\tt clamp} at the bottom.
+%
+To explain one unintuitive example, the {\tt invert-low-bit} operation on a value {\tt v} can be implemented in terms of {\tt val < N} by setting {\tt val} to the low bit of {\tt v} zero-extended to 32 bits and {\tt N} to 1, and zero-extending the low 1 bit of the return value of {\tt val < N} to 32 bits.
+%
+Some such functionalities owe more to the flexibility of the adapter
+family than they do to the reference function.
+%
+These results suggest it would be worthwhile in the future to prune
+them earlier by searching for instances of the simplest reference
+functions first, and then excluding these from future searches.
+
+Timeouts were the third possible conclusion of each adapter synthesis task.
+The number of timeouts is reported in Table~\ref{table:general}.
+%
+We show a histogram of the total running time used to find adapters in Figure~\ref{fig:clamp_hist} for the {\tt clamp} reference function.
+%
+Similar histograms for {\tt tile\_pos} and {\tt median} reference
+functions can be found in Section~\ref{sec:histograms}.
+%
+\input{chapters/adapter_synthesis/revengg_histograms}
+%
+\subsection{Comparing adapter families}
+\label{sec:eval_compare}
+%
+We also explored the tradeoff between adapter search space size and effectiveness of the adapter family.
+%
+We ran all 46,831 target code fragments with {\tt clamp} as the reference function using two additional adapter families beyond the combination of type conversion family with return value substitution described above.
+%
+The first adapter family allowed only argument permutation and the second allowed argument permututation along with substitution with unrestricted 32-bit constants.
+%
+We ran the first adapter family setup (argument permutation + return value substitution) with a 2.5 minute hard time limit, the second adapter family setup (argument substitution + return value substitution) with a 5 minute hard time limit, and the third adapter family setup (argument substitution + return value substitution) was the same as the previous subsection with also a 5 minute hard time limit.
+%
+We present our results in Table \ref{table:compare}.
+%
+\begin{table}
+\centering
+\caption{Comparing adapter families with 46,831 target code fragments and {\tt clamp} reference function}
+\label{table:compare}
+\begin{tabular}{|l|l|l|l|l|}
+\hline
+																 & size           & \#-ad & \#-inequiv & \#-timeout \\ \hline
+\begin{tabular}[c]{@{}l@{}}arg\_perm+\\ ret\_sub-2.5m\end{tabular} & 4.98E+10       & 9     & 46803      & 19         \\ \hline
+\begin{tabular}[c]{@{}l@{}}arg\_sub+\\ ret\_sub-2.5m\end{tabular}  & 1.3538427E+126 & 705   & 45782      & 344        \\ \hline
+\begin{tabular}[c]{@{}l@{}}type\_conv+\\ ret\_sub-5m\end{tabular}  & 1.3538430E+126 & 683   & 40553      & 5595       \\ \hline
+\end{tabular}
+\end{table}
+%
+As expected, the number of timeouts increases with an increase in the size of adapter search space.
+%
+Table \ref{table:compare} also shows that, for {\tt clamp}, a simpler adapter family is better at finding adapters than a more expressive family, because more searches can complete within the timeout.
+%
+But, this may not be true for all reference functions.
+%
+Table~\ref{table:compare} suggests that, when computationally feasible, adapter families should be tried in increasing order of expressiveness to have the fewest timeouts overall.
+%
+We plan to explore this tradeoff between expressiveness and effectiveness of adapter families in the future.
+

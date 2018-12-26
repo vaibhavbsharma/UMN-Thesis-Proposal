@@ -1,0 +1,215 @@
+\begin{table*}[]
+\centering
+\caption{Metrics for the insubstitutable conclusion for all reference functions}
+\label{table:inequiv_full}
+	\begin{tabular}{@{}llllllll@{}}
+		\toprule
+		\multicolumn{1}{l}{fn\_name} & \multicolumn{1}{l}{\#} &
+		\multicolumn{1}{l}{steps} &
+		\multicolumn{1}{l}{\begin{tabular}[c]{@{}l@{}}total time\\
+		(solver)\end{tabular}} &
+				\multicolumn{1}{l}{\begin{tabular}[c]{@{}l@{}}CE total time \\
+				(solver)\end{tabular}} &
+						\multicolumn{1}{l}{\begin{tabular}[c]{@{}l@{}}CE last time
+						\\ (solver)\end{tabular}} &
+								\multicolumn{1}{l}{\begin{tabular}[c]{@{}l@{}}AS total
+								time \\ (solver)\end{tabular}} &
+										\multicolumn{1}{l}{\begin{tabular}[c]{@{}l@{}}AS
+										last time\\ (solver)\end{tabular}} \\ \midrule
+										\multicolumn{1}{l}{clamp(\#3)} &
+										\multicolumn{1}{l}{40553} &
+										\multicolumn{1}{l}{7.711} &
+										\multicolumn{1}{l}{63.015 (6.361)} &
+										\multicolumn{1}{l}{8.171 (0.375)} &
+										\multicolumn{1}{l}{1.703 (0.112)} &
+										\multicolumn{1}{l}{54.844 (5.986)} &
+										\multicolumn{1}{l}{38.464 (4.032)} \\ \midrule
+										\multicolumn{1}{l}{prev\_pow\_2(\#1)} &
+										\multicolumn{1}{l}{46767} &
+										\multicolumn{1}{l}{4.258} &
+										\multicolumn{1}{l}{7.521 (0.492)} &
+										\multicolumn{1}{l}{4.833 (0.225)} &
+										\multicolumn{1}{l}{2.008 (0.154)} &
+										\multicolumn{1}{l}{2.687 (0.267)} &
+										\multicolumn{1}{l}{1.502 (0.201)} \\ \midrule
+										\multicolumn{1}{l}{abs\_diff(\#2)} &
+										\multicolumn{1}{l}{46250} &
+										\multicolumn{1}{l}{8.205} &
+										\multicolumn{1}{l}{18.735 (1.384)} &
+										\multicolumn{1}{l}{11.281 (0.411)} &
+										\multicolumn{1}{l}{2.281 (0.124)} &
+										\multicolumn{1}{l}{7.453 (0.973)} &
+										\multicolumn{1}{l}{3.268 (0.562)} \\ \midrule
+										\multicolumn{1}{l}{bswap32(\#1)} &
+										\multicolumn{1}{l}{46708} &
+										\multicolumn{1}{l}{4.682} &
+										\multicolumn{1}{l}{8.184 (0.493)} &
+										\multicolumn{1}{l}{5.136 (0.196)} &
+										\multicolumn{1}{l}{1.764 (0.102)} &
+										\multicolumn{1}{l}{3.048 (0.297)} &
+										\multicolumn{1}{l}{1.620 (0.217)} \\ \midrule
+										\multicolumn{1}{l}{integer\_cmp(\#2)} &
+										\multicolumn{1}{l}{46467} &
+										\multicolumn{1}{l}{5.249} &
+										\multicolumn{1}{l}{15.324 (1.772)} &
+										\multicolumn{1}{l}{7.850 (0.404)} &
+										\multicolumn{1}{l}{2.816 (0.177)} &
+										\multicolumn{1}{l}{7.474 (1.369)} &
+										\multicolumn{1}{l}{4.640 (0.999)} \\ \midrule
+										\multicolumn{1}{l}{even(\#1)} &
+										\multicolumn{1}{l}{46823} &
+										\multicolumn{1}{l}{4.218} &
+										\multicolumn{1}{l}{12.699 (0.859)} &
+										\multicolumn{1}{l}{7.088 (0.229)} &
+										\multicolumn{1}{l}{2.883 (0.149)} &
+										\multicolumn{1}{l}{5.611 (0.630)} &
+										\multicolumn{1}{l}{3.881 (0.529)} \\ \midrule
+										\multicolumn{1}{l}{div255(\#1)} &
+										\multicolumn{1}{l}{46823} &
+										\multicolumn{1}{l}{4.381} &
+										\multicolumn{1}{l}{7.568 (0.463)} &
+										\multicolumn{1}{l}{4.849 (0.206)} &
+										\multicolumn{1}{l}{1.824 (0.117)} &
+										\multicolumn{1}{l}{2.719 (0.257)} &
+										\multicolumn{1}{l}{1.499 (0.196)} \\ \midrule
+										\multicolumn{1}{l}{reverse\_bits(\#1)} &
+										\multicolumn{1}{l}{46541} &
+										\multicolumn{1}{l}{12.536} &
+										\multicolumn{1}{l}{50.866 (5.645)} &
+										\multicolumn{1}{l}{22.051 (0.784)} &
+										\multicolumn{1}{l}{2.359 (0.103)} &
+										\multicolumn{1}{l}{28.815 (4.861)} &
+										\multicolumn{1}{l}{12.573 (1.454)} \\ \midrule
+										\multicolumn{1}{l}{binary\_log(\#1)} &
+										\multicolumn{1}{l}{46528} &
+										\multicolumn{1}{l}{4.024} &
+										\multicolumn{1}{l}{25.631 (6.368)} &
+										\multicolumn{1}{l}{4.848 (0.551)} &
+										\multicolumn{1}{l}{2.004 (0.136)} &
+										\multicolumn{1}{l}{20.783 (5.817)} &
+										\multicolumn{1}{l}{15.253 (4.314)} \\ \midrule
+										\multicolumn{1}{l}{median(\#3)} &
+										\multicolumn{1}{l}{32171} &
+										\multicolumn{1}{l}{6.484} &
+										\multicolumn{1}{l}{89.779 (15.126)} &
+										\multicolumn{1}{l}{6.598 (0.312)} &
+										\multicolumn{1}{l}{1.723 (0.097)} &
+										\multicolumn{1}{l}{83.181 (14.815)} &
+										\multicolumn{1}{l}{75.092 (13.180)} \\ \midrule
+										\multicolumn{1}{l}{hex\_value(\#1)} &
+										\multicolumn{1}{l}{46354} &
+										\multicolumn{1}{l}{3.157} &
+										\multicolumn{1}{l}{9.233 (2.092)} &
+										\multicolumn{1}{l}{4.412 (0.370)} &
+										\multicolumn{1}{l}{2.333 (0.128)} &
+										\multicolumn{1}{l}{4.821 (1.722)} &
+										\multicolumn{1}{l}{3.894 (1.471)} \\ \midrule
+										\multicolumn{1}{l}{transform\_from\_basic\_ops(\#10)}
+										& \multicolumn{1}{l}{40169} &
+										\multicolumn{1}{l}{10.253} &
+										\multicolumn{1}{l}{115.732 (8.667)} &
+										\multicolumn{1}{l}{9.020 (0.452)} &
+										\multicolumn{1}{l}{1.552 (0.079)} &
+										\multicolumn{1}{l}{106.712 (8.215)} &
+										\multicolumn{1}{l}{75.875 (5.514)} \\ \midrule
+										\multicolumn{1}{l}{get\_descriptor\_length\_24b(\#1)}
+										& \multicolumn{1}{l}{46625} &
+										\multicolumn{1}{l}{5.442} &
+										\multicolumn{1}{l}{11.687 (0.718)} &
+										\multicolumn{1}{l}{7.791 (0.329)} &
+										\multicolumn{1}{l}{2.384 (0.104)} &
+										\multicolumn{1}{l}{3.896 (0.388)} &
+										\multicolumn{1}{l}{1.988 (0.301)} \\ \midrule
+										\multicolumn{1}{l}{tile\_pos(\#4)} &
+										\multicolumn{1}{l}{24696} &
+										\multicolumn{1}{l}{8.031} &
+										\multicolumn{1}{l}{67.636 (27.126)} &
+										\multicolumn{1}{l}{7.045 (0.397)} &
+										\multicolumn{1}{l}{1.756 (0.091)} &
+										\multicolumn{1}{l}{60.591 (26.728)} &
+										\multicolumn{1}{l}{46.309 (20.400)} \\ \midrule
+										\multicolumn{1}{l}{diract\_picture\_n\_before\_m(\#2)}
+										& \multicolumn{1}{l}{46393} &
+										\multicolumn{1}{l}{6.615} &
+										\multicolumn{1}{l}{15.315 (1.327)} &
+										\multicolumn{1}{l}{6.968 (0.315)} &
+										\multicolumn{1}{l}{2.226 (0.116)} &
+										\multicolumn{1}{l}{8.347 (1.012)} &
+										\multicolumn{1}{l}{3.746 (0.337)} \\ \midrule
+										\multicolumn{1}{l}{ps\_id\_to\_tk(\#1)} &
+										\multicolumn{1}{l}{46721} &
+										\multicolumn{1}{l}{4.41} &
+										\multicolumn{1}{l}{15.811 (2.370)} &
+										\multicolumn{1}{l}{7.414 (1.090)} &
+										\multicolumn{1}{l}{2.579 (0.190)} &
+										\multicolumn{1}{l}{8.397 (1.280)} &
+										\multicolumn{1}{l}{6.504 (1.127)} \\ \midrule
+										\multicolumn{1}{l}{leading\_zero\_count(\#1)} &
+										\multicolumn{1}{l}{46727} &
+										\multicolumn{1}{l}{7.838} &
+										\multicolumn{1}{l}{16.737 (2.105)} &
+										\multicolumn{1}{l}{8.462 (0.598)} &
+										\multicolumn{1}{l}{2.090 (0.136)} &
+										\multicolumn{1}{l}{8.275 (1.507)} &
+										\multicolumn{1}{l}{3.473 (0.609)} \\ \midrule
+										\multicolumn{1}{l}{trailing\_zero\_count(\#1)} &
+										\multicolumn{1}{l}{46701} &
+										\multicolumn{1}{l}{3.392} &
+										\multicolumn{1}{l}{19.508 (6.189)} &
+										\multicolumn{1}{l}{4.161 (0.706)} &
+										\multicolumn{1}{l}{1.881 (0.135)} &
+										\multicolumn{1}{l}{15.347 (5.483)} &
+										\multicolumn{1}{l}{13.786 (5.088)} \\ \midrule
+										\multicolumn{1}{l}{popcnt\_32(\#1)} &
+										\multicolumn{1}{l}{46802} &
+										\multicolumn{1}{l}{5.602} &
+										\multicolumn{1}{l}{11.500 (0.818)} &
+										\multicolumn{1}{l}{7.296 (0.313)} &
+										\multicolumn{1}{l}{2.471 (0.155)} &
+										\multicolumn{1}{l}{4.204 (0.504)} &
+										\multicolumn{1}{l}{2.076 (0.335)} \\ \midrule
+										\multicolumn{1}{l}{parity(\#1)} &
+										\multicolumn{1}{l}{46821} &
+										\multicolumn{1}{l}{4.988} &
+										\multicolumn{1}{l}{9.968 (0.644)} &
+										\multicolumn{1}{l}{6.447 (0.292)} &
+										\multicolumn{1}{l}{2.584 (0.179)} &
+										\multicolumn{1}{l}{3.521 (0.352)} &
+										\multicolumn{1}{l}{1.813 (0.244)} \\ \midrule
+										\multicolumn{1}{l}{dv\_audio\_12\_to\_16(\#1)} &
+										\multicolumn{1}{l}{46637} &
+										\multicolumn{1}{l}{3.884} &
+										\multicolumn{1}{l}{17.708 (2.780)} &
+										\multicolumn{1}{l}{8.279 (0.598)} &
+										\multicolumn{1}{l}{3.607 (0.155)} &
+										\multicolumn{1}{l}{9.429 (2.182)} &
+										\multicolumn{1}{l}{7.004 (1.673)} \\ \midrule
+										\multicolumn{1}{l}{is\_power\_2(\#1)} &
+										\multicolumn{1}{l}{46801} &
+										\multicolumn{1}{l}{3.791} &
+										\multicolumn{1}{l}{9.130 (1.357)} &
+										\multicolumn{1}{l}{5.420 (0.316)} &
+										\multicolumn{1}{l}{2.819 (0.225)} &
+										\multicolumn{1}{l}{3.710 (1.042)} &
+										\multicolumn{1}{l}{2.218 (0.659)} \\ \midrule
+										\multicolumn{1}{l}{RenderRGB(\#3)} &
+										\multicolumn{1}{l}{46061} &
+										\multicolumn{1}{l}{5.663} &
+										\multicolumn{1}{l}{17.038 (0.901)} &
+										\multicolumn{1}{l}{9.718 (0.366)} &
+										\multicolumn{1}{l}{2.670 (0.172)} &
+										\multicolumn{1}{l}{7.320 (0.535)} &
+										\multicolumn{1}{l}{4.023 (0.330)} \\ \midrule
+										\multicolumn{1}{l}{decode\_BCD(\#1)} &
+										\multicolumn{1}{l}{46824} &
+										\multicolumn{1}{l}{4.706} &
+										\multicolumn{1}{l}{8.751 (1.124)} &
+										\multicolumn{1}{l}{5.516 (0.356)} &
+										\multicolumn{1}{l}{1.890 (0.202)} &
+										\multicolumn{1}{l}{3.235 (0.768)} &
+										\multicolumn{1}{l}{1.903 (0.618)} \\ \midrule
+										mpga\_get\_frame\_samples(\#1) & 46235 & 3.366 &
+										9.288 (2.057) & 4.887 (0.497) & 2.580 (0.148) &
+										4.401 (1.560) & 3.595 (1.454) \\ \bottomrule
+									\end{tabular}
+								\end{table*}

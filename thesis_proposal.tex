@@ -2,6 +2,7 @@
 % thesis.tex: Primary TeX control file for thesis.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \documentclass[11pt, oneside]{mnthesis}
+\draft
 \usepackage{epsfig} % Allows the inclusion of eps files
 \usepackage{epic} % Enhanced picture mode
 \usepackage{eepic} % Extensions for epic
@@ -30,24 +31,50 @@
 % Configure the cleveref package
 \newcommand{\creflastconjunction}{, and } % Always use the serial comma
 
-\input{my_definitions}
-
-\linespread{1.3}
-
+\linespread{1.0}
 % Compile only the chapters listed here
 \includeonly{
-    preliminaries/title,
-    chapters/intro,
-    chapters/science,
-    chapters/experiment,
-    chapters/simulation,
-    chapters/reconstruction,
-    chapters/data_set,
-    chapters/event_selection,
-    chapters/analysis,
-    chapters/conclusion,
-    chapters/app_glossary,
+preliminaries/title,
+chapters/adapter_synthesis,
+chapters/path_merging_connection,
+chapters/path_merging,
+chapters/program_repair,
+chapters/conclusion,
+%chapters/app_glossary,
+%chapters/adapter_synthesis_appendix
 }
+
+%begin adapter_synthesis preamble
+\usepackage{listings}
+\usepackage{color}
+\usepackage{amsmath,amssymb}
+% Workaround for compatibility between older (e.g., Ubuntu 12.04)
+% versions of algorithm2e and the ACM template
+% https://depinfi.wordpress.com/2012/11/26/using-algorithm2e-in-acm-template/
+% Commented out in favor of just keeping the 14.04 version of algorithm2e
+% in the repository.
+%\makeatletter
+%\newif\if@restonecol
+%\makeatother
+%\let\algorithm\relax
+%\let\endalgorithm\relax
+\usepackage{algorithm2e}
+\usepackage{wrapfig}
+
+
+\usepackage[nounderscore]{syntax}
+
+\usepackage{newfloat}
+
+\usepackage{todonotes}
+\DeclareGraphicsExtensions{.pdf,.jpeg,.png}
+
+
+\usepackage{float}
+\input{my_definitions}
+%end adapter_synthesis preamble
+
+
 
 \begin{document}
 \bibliographystyle{hunsrt} % style of bibliography
@@ -62,20 +89,20 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Now lets include the body of the document...
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\include{chapters/intro}
+%\include{chapters/intro}
 
 %Base Chapters
-\include{chapters/science}
-\include{chapters/experiment}
+\include{chapters/adapter_synthesis}
+\include{chapters/path_merging_connection}
 
 %Software Chapters
-\include{chapters/simulation}
-\include{chapters/reconstruction}
+\include{chapters/path_merging}
+\include{chapters/program_repair}
 
 %Analysis Chapters
-\include{chapters/data_set}
-\include{chapters/event_selection}
-\include{chapters/analysis}
+%\include{chapters/data_set}
+%\include{chapters/event_selection}
+%\include{chapters/analysis}
 
 %Conclusion
 \include{chapters/conclusion}
@@ -84,14 +111,16 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Bibliography
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\bibliography{thesis}
+%\bibliography{thesis}
+\bibliography{chapters/adapter_synthesis/references}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Appendices
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \appendix
-\include{chapters/app_glossary}
+%\include{chapters/app_glossary}
+%\include{chapters/adapter_synthesis_appendix}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

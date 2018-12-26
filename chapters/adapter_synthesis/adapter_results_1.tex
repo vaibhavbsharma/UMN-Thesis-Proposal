@@ -1,0 +1,45 @@
+
+
+%the numbers in the above table's Timeout column include iteration limit timeouts 
+%these were derived using the check_iterlimit.cpp file at MSI
+
+%we reduce the number of inequivalences by 34 because that is the number of function pairs
+% for which the words "after too many" was found in the log of that function pair
+% but near the end of that function pair's log, we found them to be inequivalent
+
+%similar logic was applied in check_iterlimit.cpp for function pairs with "missing results from check run" and for function pairs for which a "Final adapter" was reported
+
+%finally, adding the search string "Solver died with result code 134" instead of "after too many" allowed us to search for number of solver timeouts
+
+%the final numbers in the table are harvest_results[ineq|missing|final] - `grep "ineq: |missing results: | final: " results/<simple-1 or typeconv-4>/iterlimit_solvertimeout.txt` for the 3 columns, ineq, missing results, final adapter. The total of these 3 subtractions was added to the Timeout column. 
+
+\begin{table*}[!htbp]
+    \centering
+\caption{adapters found within eglibc-2.19}
+\label{table:libc-adapters}
+%\resizebox{0.6\columnwidth}{!}{%
+\begin{tabular}{ll}
+\hline
+$f_1$ $\leftarrow$ $f_2$ or $f_1$ $\leftrightarrow$ $f_2$                                                                                                                                                                      & adapter                                                                                   \\ \hline
+\begin{tabular}[c]{@{}l@{}}abs(1) $\leftarrow$ labs(1)\\ abs(1) $\leftarrow$ llabs(1)\end{tabular}                                                                                                                             & \begin{tabular}[c]{@{}l@{}}32-to-64S(\#0) and \\ 32-to-64Z(return value)\end{tabular}     \\ \hline
+\begin{tabular}[c]{@{}l@{}}labs(1) $\leftrightarrow$ llabs(1)\end{tabular}                                                                                                                           & \#0                                                                                       \\ \hline
+\begin{tabular}[c]{@{}l@{}}ldiv(1) $\leftrightarrow$ lldiv(1)\end{tabular}                                                                                                                           & \#0                                                                                       \\ \hline
+\begin{tabular}[c]{@{}l@{}}ffs(1) $\leftarrow$ ffsl(1)\\ ffs(1) $\leftarrow$ ffsll(1)\end{tabular}                                                                                                                              & 32-to-64S(\#0)                                                                            \\ \hline
+\begin{tabular}[c]{@{}l@{}}ffsl(1) $\leftrightarrow$ ffsll(1)\end{tabular}                                                                                                                           & \#0                                                                                       \\ \hline
+setpgrp(0) $\leftarrow$ setpgid(2)                                                                                                                                                                            & 0, 0                                                                                    \\ \hline
+wait(1) $\leftarrow$ waitpid(3)                                                                                                                                                                               & -1, \#0, 0                                                                               \\ \hline
+wait(1) $\leftarrow$ wait4(4)                                                                                                                                                                                 & -1, \#0, 0, 0                                                                          \\ \hline
+waitpid(3) $\leftarrow$ wait4(4)                                                                                                                                                                              & \#0, \#1, \#2, 0                                                                        \\ \hline
+wait(1) $\leftarrow$ wait3(3)                                                                                                                                                                                 & \#0, 0, 0                                                                               \\ \hline
+wait3(3) $\leftarrow$ wait4(4)                                                                                                                                                                                & -1, \#0, \#1, \#2                                                                       \\ \hline
+umount(1) $\leftarrow$ umount2(2)                                                                                                                                                                             & \#0, 0                                                                                  \\ \hline
+\begin{tabular}[c]{@{}l@{}}putchar(1) $\leftrightarrow$ putchar\_unlocked\\ putwchar(1) $\leftrightarrow$ putwchar\_unlocked(1) \end{tabular} & \#0                                                                                       \\ \hline
+\begin{tabular}[c]{@{}l@{}}recv(4) $\leftarrow$ recvfrom(6)\\ send(4) $\leftarrow$ sendto(6)\end{tabular}                                                                                                            & \begin{tabular}[c]{@{}l@{}}32-to-64S(\#0), \#1, \#2, \\ 32-to-64S(\#3), 0, 0\end{tabular} \\ \hline
+\begin{tabular}[c]{@{}l@{}}atol(1) $\leftrightarrow$ atoll(1)\end{tabular}                                                                                                            & \begin{tabular}[c]{@{}l@{}}\#0\end{tabular} \\ \hline
+\begin{tabular}[c]{@{}l@{}}atol(1) $\leftarrow$ strtol(3)\\ atoi(1) $\leftarrow$ strtol(3) \\ atoll(1) $\leftarrow$ strtoll(3) \end{tabular}                                                           & \begin{tabular}[c]{@{}l@{}}\#0, 0, 10 \end{tabular} \\ \hline \hline
+isupper(1) $\leftarrow$ islower(1)                                                                                                                                                                            & \#0 + 32                                                                                  \\ \hline
+islower(1) $\leftarrow$ isupper(1)                                                                                                                                                                            & \#0 - 32                                                                                  \\ \hline
+killpg(1) $\leftarrow$ kill(1)                                                                                                                                                                            & -\#0, \#1                                                                                  \\ \hline
+\end{tabular}
+%}
+\end{table*}

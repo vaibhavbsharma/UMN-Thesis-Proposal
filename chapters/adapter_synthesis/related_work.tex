@@ -1,0 +1,269 @@
+\section{Related Work}\label{sec:related-work}
+\subsection{Detecting Equivalent Code}
+%
+The majority of previous work in this area has focused on detecting \emph{syntactically} equivalent code, or `clones,' which are, for instance, the result of copy-and-paste \cite{Kamiya:2002:CMT:636188.636191,Li:2004:CTF:1251254.1251274,Jiang:2007:DSA:1248820.1248843}. 
+%
+%Applications of detecting functionally equivalent code (aside from our motivating application of multivariant execution) include functionality-based refactoring, semantic-aware code search, and checking `yesterday's code against today's.'  
+%
+Jiang et al.~\cite{Jiang:2009:AMF:1572272.1572283} propose an algorithm for automatically detecting functionally equivalent code fragments using random testing and allow for limited types of adapter functions over code inputs --- specifically permutations and combinations of multiple inputs into a single struct. 
+%Similar to our work, both \cite{Jiang:2009:AMF:1572272.1572283} and \cite{Ramos:2011:PLE:2032305.2032360} define functional equivalence based on input and output behavior. 
+%The key difference between our approach and \cite{Jiang:2009:AMF:1572272.1572283} is that we rely on symbolic execution as opposed to random testing, and that we allow for more interesting adapter functions over code inputs. 
+Ramos et al.~\cite{Ramos:2011:PLE:2032305.2032360} present a tool that checks for equivalence between arbitrary C functions using symbolic execution.
+%
+While our definition of functional equivalence is similar to that used by Jiang et al. and Ramos et al., our adapter families capture a larger set of allowed transformations during adapter synthesis than both. 
+
+%Detecting pieces of equivalent code is useful for many applications including refactoring, code understanding, optimization, and plagiarism detection. 
+%
+Amidon et al.~\cite{program_fracture} describe a technique for fracturing a program into pieces which can be replaced by more optimized code from multiple applications.
+%
+They mention the need for automatic generation of adapters which enable replacement of pieces of code which are not immediately compatible.
+%
+While Amidon et al. describe a parameter reordering adapter, they do not mention how automation of synthesis of such adapters can be achieved.
+%
+David et al.~\cite{statistical_similarity} decompose binary code into smaller pieces, find semantic similarity between pieces, and use statistical reasoning to compose similarity between procedures.
+%
+Since this approach relies on pieces of binary code, they cannot examine binary code pieces that make function calls and check for semantic similarity across wrappers around function calls.
+%
+Goffi et al.~\cite{goffi} synthesize a sequence of functions that are equivalent to another function w.r.t a set of execution scenarios. 
+%
+Their implementation is similar to our concrete enumeration-based adapter search which produces equivalence w.r.t. a set of tests.
+%
+In the hardware domain, adapter synthesis has been applied to low-level combinatorial circuits by Gasc\'{o}n et al~\cite{gascon}.
+%
+They apply equivalence checking to functional descriptions of a low-level combinatorial circuit and reference implementations while synthesizing a correct mapping of the input and output signals and setting of control signals. 
+%
+They convert this mapping problem into a exists/forall problem which is solved using the Yices SMT solver~\cite{yices}. 
+%
+More recently, Katz et al.~\cite{katz2018rnn} have applied machine learning to the problem
+of decompilation of binary code. 
+%
+Their technique predicts decompiled source code, given a fragment of
+binary code.
+%
+A primary difference between adapter synthesis and the technique
+presented by Katz et al. is that, if substitutability is found by
+adapter synthesis, the match will be exact, whereas the Katz et al\rq s
+technique finds an approximate match which may not be usable for
+applications such as library replacement.
+%
+% Their permutation of input signals and output signals are similar to our argument substitution and return value adapters.
+%
+%However, their technique depends on the user specifying input and control signals for reference implementations whereas our technique does not depend on any such prior classification. 
+%
+%\subsection{Variant Generation}
+%
+%Another similar approach to developing variants relies on compiler-based randomization~\cite{Larsen:2014:SAS:2650286.2650803}. 
+%
+%It can be convenient to modify a compiler to support randomization because compilers already have support for many of the analyses required for randomization and are set up to target many different architectures. 
+%
+%However, compiler-based variant generation requires that the source code of the program to be randomized is available and that it is possible to customize the compiler. 
+%
+%Because we check for functional equivalence at the binary level, our approach does not require source code and is compatible with proprietary compilers. 
+%
+%Compiler-based approaches to diversity are also limited in the types of diversity they can introduce. 
+%
+\subsection{Component Retrieval}
+%
+Component retrieval is a technique~\cite{rittri},~\cite{runciman1989},~\cite{runciman1991} that provides a
+search operator for finding a function, whose polymorphic type is known to the programmer, within a library of software components. 
+%
+The search results contain components whose types are similar but more general (or more specialized). 
+%
+Adapter synthesis shares the same intuition in that, it adapts the more
+general implementation of a functionlity to the more specific one.
+%
+Type-based hot swapping~\cite{duggan} and signature
+matching~\cite{zaremski} are related areas of research that rely on adapter-like operations such as currying or uncurrying functions, reordering tuples, and type conversion.
+%
+Reordering, insertion, deletion, and type conversion are only some of the many operations supported by our adapters. 
+%
+These techniques can only be applied at the source level, whereas our adapter synthesis technique can be applied at source and binary levels
+%  
+%  
+%  
+%  The earliest related work on type-based component retrieval was by Rittri~\cite{rittri}.
+%  %
+%  Given a query type A, Rittri presents a technique for searching through a library and finding all identifiers whose type is isomorphic to A.
+%  This is done by modeling the problem as a Cartesian Closed Category (CCC) that has the product, exponentiation, and terminal objects defined and using products in normal forms as bags (multisets) which can then be compared for equality.
+%  %
+%  This paper actually mentions the need to have the search system provide a conversion function to convert the library value into the type of the user's query. 
+%  %
+%  This paper mentions work done by Runciman et al.~\cite{runciman1989} which allows the search system to include a search result where the library function has an extra argument which corresponds to a value that is constant in the user's application. 
+%  %
+%  These rules come together to form our argument substitution adapter family.
+%  %
+%  In an extended 1991 paper, Runciman et al.~\cite{runciman1991} present a technique for finding a function, whose polymorphic type is known to the programmer, within a library of software components. 
+%  %
+%  The technique was evaluated at the source level. 
+%  %
+%  The presented search operator allows a programmer to explore a library for near-misses, and presents the programmer with a list of search results. 
+%  %
+%  The search results contains components whose types are similar but more general (or more specialized). 
+%  %
+%  As mentioned by Runciman et al., their technique finds the curried form of a function that is more general, and is complementary to an approach that allows re-ordering, insertion, and deletion. 
+%  %
+%  However, re-ordering, insertion, and deletion are only some of the operations performed by our adapters. 
+%  %
+%  adapter synthesis is also related to type-based hot swapping of running modules in long-lived applications. 
+%  %
+%  Duggan~\cite{duggan} presents a technique for swapping modules while they are running where the swap must be type-based.%
+%  This technique verifies the type-based swap to be correct on the basis of the version adapters provided by the user. 
+%  %
+%  The version adapters that this technique uses are exactly the same as our type conversion adapters. 
+%  %
+%  However, this technique depends on the version adapters being supplied for performing the type-based swap whereas our technique searches for the correct adapter. 
+%  %
+%  Signature matching is another problem which bears resemblance to adapter synthesis.
+%  %
+%  Zaremski et al.~\cite{zaremski} present a technique for finding functions or components in a library that match the user's query type. 
+%  %
+%  While an exact match of a search function type is useful, the technique can find more interesting search results by allowing for partial matches with relaxations such as generalized match, specialized match, and relaxations that allow transformations such as currying or uncurrying functions, reordering tuples. 
+%  %
+%  The reordering relaxation is similar to our argument substitution adapter family. 
+%  %
+%  Both of our techniques have similar applications, they lead to better program understanding, function reuse. 
+%  %
+%  However, our technique performs equivalence checking of the target and adapted reference functions, whereas their technique only matches type information. 
+%  %
+%  They mention that their technique can be combined with a specification matcher to search for specification matching only between function pairs that were returned as valid search results by their tool. 
+%  %
+%  Also, our technique is implemented at the binary level, whereas their technique is more likely to be useful as-is at the source level.
+
+\subsection{Component Adaptation}
+Component adaptation is another related area of research, that given a
+formal specification of a query component, searches a library of
+components within a set of adaptation architecture theories.
+%
+This includes techniques for adapter specification~\cite{nimble}, for component adaptation using formal specifications of components~\cite{spartacus},~\cite{penix},~\cite{penix1995},~\cite{yellin},~\cite{bracciali}.
+%
+Component adaptation has also been performed at the Java bytecode
+level~\cite{keller}, as well as at low-level C code~\cite{nita}.
+%
+Behavior sampling~\cite{podgurski} is a similar area of research for finding equivalence over a small set of input samples.
+%
+However, these techniques either relied on having a formal specification of the behavior of all components in the library to be searched, or provided techniques for translating a formally specified adapter~\cite{nimble}.
+
+%  One of the early works on component adaptation was by Purtilo et al.~\cite{nimble}.
+%  %
+%  They presented a language called Nimble which can be used by programmers to specify an interface adaptation for reuse of a module. 
+%  %
+%  The module reuse can be done in the same language or across different languages using module interconnection languages. 
+%  %
+%  This paper mentions the possibility of using an adapter function which performs the interface adaptation. 
+%  %
+%  The interface map is specified by the programmer and the code for the adapter function is generated by Nimble. 
+%  %
+%  This paper also mentions that if the bijection from the actual parameters passed by the calling function to the formal parameters taken by the reused function is order-preserving, such that the ith actual argument maps onto the ith formal argument, then the mapping is an isomorphism, and the parameter lists are syntactically equivalent. 
+%  %
+%  This is the definition used by the identity adapter which is the default adapter we start searching with.
+%  %
+%  The most significant difference between our work and Nimble is that Nimble requires the programmer to specify the adapter where we search for the adapter in an automated manner. 
+%  %
+%  If Nimble generated binary-level adapters, the adapters that our search tool finds could be encoded in the Nimble language and translated into binary code.
+%  
+%  A similar method of component adaptation was described by Morel et al.~\cite{spartacus}.
+%  %
+%  Given a formal specification of a component to be searched for and a library of components, SPARTACAS can automatically find an adaptation that reuses components in the library to implement the query component. 
+%  %
+%  SPARTACAS implements the adapter search using the sequential, alternative, and parallel adaptation architecture theories as described by Penix et al~\cite{penix}. 
+%  %
+%  Our adapter search technique can be extended further by implementing these adaptation architecture theories. 
+%  %
+%  For example, the sequential adaptation architecture can be used by passing the return value of one reference function as an argument to a second reference function.
+%  %
+%  The work done by Penix et al.~\cite{penix} is similar to adapter synthesis.
+%  %
+%  Penix et al. present a technique for automatic component adaptation using specification matching. 
+%  %
+%  The adaptation phase makes use of the results of a retrieval mechanism~\cite{penix1995} that classifies software components using semantic features derived from their formal specifications. 
+%  %
+%  The adaptation phase then searches for a way to adapt or combine components returned by the retrieval mechanism to solve the formal specification of a problem.
+%  %
+%  %
+%  Formal approaches to component adaptation have also been proposed as presented by Yellin et al.~\cite{yellin} and extended by Bracciali et al.~\cite{bracciali}
+%  %
+%  These approaches adapt mismatched behavior between two components. 
+%  %
+%  Bracciali et al. provide a high-level notation for expressing adapter specifications, and an automated procedure for converting the adapter specifications to concrete adapters. 
+%  %
+%  Their work bears similarity to ours because they also express the adapter as a component-in-the-middle, similar to our intuition of the adapter being a wrapper around the reference function. 
+%  %
+%  Their one-to-one, many-to-one correspondence and use of the keyword none to indicate asymmetry between components when adapting components, were similar to the operations performed by our argument substitution adapter, when adapting functions. 
+%  %
+%  Finally, both our technique and theirs perform adaptation at the interface level.
+%  %
+%  However, our technique adapts the reference function to the target function, whereas their technique adapted mismatched behavior between both components simultaneously. 
+%  %
+%  Our technique treats the binary-level implementation of the target and reference functions as their own behavior specification whereas their technique requires the behavior of both components to be formally specified. 
+%  %
+%  Our adaptation technique does not depend on the availability of formal specifications of functions and, therefore, is an improvement over the work presented in these component adaptation techniques.
+%  
+%  Component adaptation has also been done at the Java bytecode level~\cite{keller}.
+%  %
+%  In this work, the programmer writes a delta (adapter) specification, which is translated into a modified class bytecode form by a Delta compiler. 
+%  %
+%  The allowed operations are renaming of class, methods, fields, changing the super class, add interface to implements clause, add method, add field to the class, and finally, rename a symbolic reference to a field. 
+%  %
+%  Java byte code contains all references to classes, interfaces, and fields, type information of all methods, method names, to ensure safe execution of programs. 
+%  %
+%  The adaptation is done only if the previously-specified preconditions are met. 
+%  %
+%  Thus, adapter search is not automated, but manually defined in an earlier step (adapter specification).
+%  %
+%  Adaptation of data layout has also been done at the bit-level for C code by Nita et al~\cite{nita}.
+%  %
+%  However, this work also allows a programmer to specify multiple alternative data layouts in a declarative language, instead of automating this search.
+%  
+%  Behavior sampling~\cite{podgurski} also bears a similarity with adapter synthesis.
+%  %
+%  This technique includes our intuition that the order of parameters is not important as long as there is one-to-one correspondence between the parameters of the target interface and the formal parameters of the reference interface and the correspondence also respects types and modes.  
+%  %
+%  This technique finds behavioral equivalence over a small set of input samples and leaves it up to the user to determine exact equivalence by going through the search results. 
+%  %
+%  The user must also define expected outputs for each input in the sample set by computing the output values by hand or some other means. 
+%  %
+%  This is in contrast with our technique which finds exact equivalence over all inputs to the target function where the reference function is being adapted to become behaviorally equivalent to the target functions.
+%  % 
+\subsection{Program Synthesis}
+%
+Program synthesis is an active area of research that has many applications including generating optimal instruction sequences \cite{Massalin:1987:SLS:36206.36194,Joshi:2002:DGS:512529.512566}, automating repetitive programming, filling in low-level program details after programmer intent has been expressed \cite{Solar-LezamaTBSS2006}, and even binary diversification \cite{Jacob2008}. 
+%
+Programs can be synthesized from formal specifications \cite{Manna:1980:DAP:357084.357090}, simpler (likely less efficient) programs that have the desired behavior \cite{Massalin:1987:SLS:36206.36194,Solar-LezamaTBSS2006,Joshi:2002:DGS:512529.512566}, or input/output oracles \cite{Jha:2010:OCP:1806799.1806833}. 
+%
+We take the second approach to specification, treating existing functions as specifications when synthesizing adapter functions.
+%
+% We focus on a type of synthesis known as counterexample-guided inductive synthesis (CEGIS). 
+% CEGIS is useful for our work because it is guaranteed to terminate when the space of possible programs is finite, and if it terminates by producing a program, then that program is guaranteed to be correct with respect to the specification. 
+% Though the space of candidate programs may be very large, a CEGIS search tends to take relatively few iterations \cite{Solar-LezamaTBSS2006}.
+% 
+% 
+% 
+%    \subsection{$N$-version Systems}
+%    %\subsection{$N$-version and $N$-variant Systems}
+%    The earliest work related to creating function equivalence happened during the 1970s when fault-tolerant computing research began to gain momentum and the idea of n-version programming was proposed~\cite{chen1977},~\cite{chen1978}.
+%    N-version programming is defined as the process of independently generating functionally equivalent programs from the same initial specification.
+%    Since then, a variety of work has analyzed the assumption of the independence of errors among different versions \cite{Knight:1986:EEA:10677.10688}, the effectiveness of $N$-version programming in the presence of overlapping errors \cite{Eckhardt:1985:TBA:1314034.1314066}, and the practicality from a software engineering standpoint of developing multiple less-reliable versions versus a single highly-reliable version \cite{Hatton:1997:NDV:624622.625783}. 
+%    %Generally, this work finds that running several program versions simultaneously and using a voting mechanism can produce a system that is more reliable than any of the versions individually, and that developing different versions of a program is a good way to achieve fault tolerance considering that it is difficult to develop one really good, bug-free version. 
+%    %However, this work also suggests that it is difficult to make formal guarantees about the security that an $N$-version system provides.
+%    
+%    Recent approaches~\cite{Baudry:2015:MFS:2808687.2807593} to $N$-version programming have taken advantage of \emph{natural diversity} seen in related software programs. 
+%    Natural diversity refers to diverse implementations of the same functionality that emerge naturally, typically due to economic competition. 
+%    Natural diversity can be seen in the diverse implementations of, but similar functionalities provided by, Web browsers, operating systems, firewalls, database management systems, and so on. 
+%    Studies have shown that the naturally-emerging diverse implementations of different commercial-off-the-shelf products are good candidates for $N$-version programming because they typically have independent bugs \cite{Gashi:1311908, Han:2009:ESD:1575533.1575544}. 
+%    %We hope to take advantage of natural diversity within a codebase when looking for functionally equivalent functions.
+%    
+%    %Another recent take on the idea of executing multiple implementations of a program simultaneously for fault tolerance is called $N$-variant (or multivariant) execution \cite{Cox:2006:NSS:1267336.1267344,Salamat:5714703}. 
+%    %The distinction between a `version' and a `variant' is that a version is manually developed while a variant is automatically generated. 
+%    %Cox et al.~\cite{Cox:2006:NSS:1267336.1267344} show how to construct variants, so that they have disjoint vulnerabilities with respect to certain classes of attacks, using two randomization techniques: memory address partitioning, which provides protection against attacks involving absolute memory addresses, and instruction tagging, which detects attempts to execute injected code. 
+%    %Salamat et al.~\cite{Salamat:5714703} introduce a user-space multivariant execution environment (MVEE) that monitors multiple variants of a program running in parallel and show that this technique is effective in detecting and preventing code injection attacks. 
+%    %MVEE variants are generated using different stack growths and system call number randomization. One restriction to the MVEE is that it requires all variants to make the same system calls, in the same order, with the same arguments.
+%    %
+%    %Automated variant construction avoids the overhead of manual development of multiple program versions and enables more formal arguments about a system's security, but existing variant construction techniques are limited in the types of diversity that they can introduce. 
+%    %Techniques like memory address partitioning, instruction tagging, memory rearrangement, and system call randomization do not introduce diversity at the design level, i.e. at the level of data structures and algorithms. 
+%    %We believe that design-level diversity is also an important source of protection against attacks and we hope to discover design-level diversity through our search for equivalent functions. 
+%    %However, to avoid the cost of manually developing different program implementations, we want to use the diverse equivalent functions we find in an automated way. 
+%    
+%    %A discussion of how to automate construction of program variants using equivalent function implementations is beyond the scope of this paper, but we mention briefly that there are many possible approaches. 
+%    %For example, we could take a static rewriting approach and randomly replace function calls at the source code or binary level by other equivalent function calls with appropriately modified arguments. 
+%    %Or we could take a dynamic approach and replace function calls during run time.
+%    

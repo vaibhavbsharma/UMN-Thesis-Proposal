@@ -6,7 +6,7 @@ MAIN_PDF=$(MAIN).pdf
 MAIN_TEX=$(MAIN).tex
 HELPER_FILES= makefile mnthesis.cls
 PRELIMS:=$(wildcard preliminaries/*.tex)
-CHAPTERS:=$(wildcard chapters/*.tex)
+CHAPTERS:=$(wildcard chapters/*.tex chapters/adapter_synthesis/*.tex)
 FIGURES := $(wildcard figures/*)
 
 # Tell make what our reserved target names are

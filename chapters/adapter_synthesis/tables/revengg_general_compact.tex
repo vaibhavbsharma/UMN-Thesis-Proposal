@@ -1,0 +1,70 @@
+\begin{table}[]
+\centering
+\caption{Reverse engineering results using 46831 target code fragments from a Rockbox firmware image and 24 reference functions from VLC media player grouped by the three overall possible terminations of adapter synthesis. The \textit{\#(full)} column reports how many code fragments were found to be adaptably substitutable, and how many of those exploited the full generality of the reference function.}
+
+\label{table:general}
+
+\begin{tabular}{|c@{\hspace{0.5\tabcolsep}}|c|@{\hspace{0.5\tabcolsep}}c|c|c@{\hspace{0.5\tabcolsep}}|c|@{\hspace{0.5\tabcolsep}}c|}
+		\hline
+		                                                                     &
+		\multicolumn{4}{c|}{adapter}
+	& \begin{tabular}[c]{@{}c@{}}no\\ adapter\end{tabular} & timeout \\
+		\hline
+		fn\_name
+		& \#(full)                                             & \#cluster &
+	steps & \begin{tabular}[c]{@{}c@{}}total \\ time\end{tabular} & \#
+				 & \#      \\ \hline
+		clamp
+	& \begin{tabular}[c]{@{}c@{}}683\\ (177)\end{tabular}  & 110       &
+		12.9  & 99.3                                                  &
+		40553                                                & 5595    \\
+		\hline
+		abs\_diff
+	& \begin{tabular}[c]{@{}c@{}}575\\ (5)\end{tabular}    & 75        &
+		10.5  & 20.0                                                  &
+		46250                                                & 6       \\
+		\hline
+		bswap32
+	& \begin{tabular}[c]{@{}c@{}}115\\ (8)\end{tabular}    & 19        &
+		8.7   & 16.6                                                  &
+		46708                                                & 8       \\
+		\hline
+	\begin{tabular}[c]{@{}c@{}}integer\_\\ cmp\end{tabular}              &
+	\begin{tabular}[c]{@{}c@{}}93\\ (5)\end{tabular}     & 15        & 9.6
+		& 21.4                                                  & 46467
+		& 271     \\ \hline
+		even
+	& \begin{tabular}[c]{@{}c@{}}3\\ (2)\end{tabular}      & 3         &
+		5.7   & 11.3                                                  &
+		46823                                                & 5       \\
+		\hline
+		median
+	& \begin{tabular}[c]{@{}c@{}}332\\ (42)\end{tabular}   & 60        &
+		13.7  & 119.2                                                 &
+		32171                                                & 14328   \\
+		\hline
+	\begin{tabular}[c]{@{}c@{}}get\_\\ descr\_len\end{tabular}           &
+	\begin{tabular}[c]{@{}c@{}}22\\ (9)\end{tabular}     & 2         & 9
+		& 16.7                                                  & 46625
+		& 184     \\ \hline
+		tile\_pos
+	& \begin{tabular}[c]{@{}c@{}}5617\\ (407)\end{tabular} & 909       &
+		10.9  & 53.5                                                  &
+		24696                                                & 16518   \\
+		\hline
+	\begin{tabular}[c]{@{}c@{}}dirac\_pic\_n\\ \_bef\_m\end{tabular}     &
+	\begin{tabular}[c]{@{}c@{}}330\\ (2)\end{tabular}    & 18        &
+		13.2  & 25.7                                                  &
+		46393                                                & 108     \\
+		\hline
+		RenderRGB
+	& \begin{tabular}[c]{@{}c@{}}763\\ (2)\end{tabular}    & 64        &
+		10.8  & 27.5                                                  &
+		46061                                                & 7       \\
+		\hline
+	\begin{tabular}[c]{@{}c@{}}mpga\_get\_\\ frame\_samples\end{tabular} &
+	\begin{tabular}[c]{@{}c@{}}22\\ (15)\end{tabular}    & 4         & 5
+		& 7.9                                                   & 46235
+		& 574     \\ \hline
+	\end{tabular}
+\end{table}
