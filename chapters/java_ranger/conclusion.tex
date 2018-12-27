@@ -1,0 +1,21 @@
+\section{Conclusion}
+\label{sec:future}
+
+We presented Java Ranger as a path merging tool for Java.
+%
+It works by systematically applying a series of transformations over a statement recovered from the CFG. This
+representation provides the benefit of modularity and makes path-merging for Java symbolic execution more accessible to
+end users.
+%
+Java Ranger has its own IR statement and it supports the construction of SSA for fields and arrays.
+%
+Java Ranger provides evidence that inlining summaries of higher-order regions can lead to a further reduction in the
+number of execution paths that need to be explored with path merging.
+%
+It supports the exploration of exceptional behavior in multi-path regions via Single Path Cases which is an alternative
+technique for summarizing unexceptional behavior while simultaneously capturing exceptional behavior of a region.
+%
+Java Ranger reinterprets path merging for symbolic execution of Java bytecode and has the potential to allow symbolic
+execution to scale up to exploration of real-world Java programs.
+
+

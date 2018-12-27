@@ -1,0 +1,194 @@
+%Path explosion problem is still the main obsticale against scaling up symbolic execution to industrial sized projects.
+%%
+%One interesting resolution to the problem is \emph{Veritesting}, which represents regions of code as disjunctive formals over paths.
+%%
+%Unlike the C compiler that inlines functions in programs, Integrating veritesting with Java bytecode presents unique challenges: notably, incorporating non-local control jumps caused by runtime polymorphism, exceptions, native calls, and dynamic 3 class loading.
+%%
+%In this paper we present our robust implementation of Java based veritesting tool that supports dynamic dispatch and
+\section{Introduction}
+%
+Symbolic execution is a popular analysis technique that performs non-standard execution of a program: operations
+in the program generate formulas over inputs along every feasible execution through branches in the program, and
+branch constraints along an execution path are combined into a predicate.
+%
+Originally developed in the 1970s~\cite{King1976,Clarke1976}, symbolic execution is a convenient building block for
+program analysis, since arbitrary behavior in the program can be discovered by adding query predicates for it to
+the symbolic program representation, and solutions to these constraints are inputs that provide the queried behavior in the program.
+%
+Some of the applications of symbolic execution include
+test generation~\cite{dart,cute}, equivalence checking~\cite{ramos,adaptorsynth}, vulnerability finding~\cite{driller,angr}, and protocol correctness checking~\cite{transport}.
+%
+Symbolic execution tools are available for many languages, including
+CREST~\cite{BurnimS2008} for C source code, KLEE~\cite{CadarDE2008}
+for C/C++ via LLVM, JDart~\cite{jdart2016} and Symbolic
+PathFinder (SPF)~\cite{spf} for Java, and S2E~\cite{ChipounovKC2012},
+FuzzBALL~\cite{BabicMMS2011}, and {\tt angr}~\cite{angr}, FuzzBALL~\cite{fuzzball} for binary code.
+%
+%Some of these tools, such as {\tt angr} and Mayhem~\cite{mayhem} that operate at the binary-level, are used for finding
+%security bugs.
+%
+%Others, such as KLEE, are used for exploring system-level programs for software engineering purposes.
+
+% \mike{More here...explain the `ecosystem' - tools for different languages: KLEE, FuzzBall, Java Symbolic Pathfinder, ...}
+
+However, scalability remains a significant challenge for many applications of symbolic execution.
+%
+In particular symbolic execution can suffer from a {\em path explosion}: every symbolic branch that has two feasible sides
+causes the number of execution paths that need to be explored to be multiplied by two.
+%
+Real-world software tends to have many branches, thereby creating exponentially many execution paths.
+%
+Symbolic execution techniques that explore one path at a time are unable to cover all paths within a reasonable time budget.
+%
+Dynamic state merging~\cite{HansenSS2009,kuznetsov} provides one way to
+alleviate scalability challenges by merging dynamic
+symbolic executors, effectively merging the paths they represent, when the benefit of introducing new symbolic state
+heuristically outweighs its cost.
+%
+Veritesting~\cite{veritesting} is another path-merging technique that can dramatically improve the performance of
+symbolic execution by effectively merging paths.
+%
+Rather than explicitly merging state representations, veritesting represents a local region of a program containing
+branches as a disjunctive summary for symbolic analysis.
+%
+This often allows many paths to be collapsed into a single path involving the region.
+%
+In previous work~\cite{veritesting}, constructing such bounded static summaries was shown to allow symbolic execution to
+find more bugs, and achieve more node and path coverage, when implemented at the X86 binary level for compiled C programs.
+%
+This motivates investigation using static regions for symbolic execution of Java software (at the Java bytecode level).
+
+Java programmers who follow best software engineering practices attempt to write code in an object-oriented
+form with common functionality implemented as a Java class and multiple not-too-large methods used to implement small
+sub-units of functionality.
+%
+This causes Java programs to make several calls to methods, such as getters and setters, to re-use small common sub-units
+of functionality.
+%
+Merging paths within regions in such Java programs using techniques described in current literature is limited by not having the ability
+to inline method summaries.
+%
+This is not a major impediment for compiled C code, as the C compiler will usually automatically inline the code for short
+methods such as \texttt{get}.
+%
+However, Java has an {\em open world} assumption, and most methods are {\em dynamically dispatched}, meaning that the code to be
+run is not certain until a method is resolved at runtime; if inlining is performed at all, it is by the JRE, so it is not reflected in bytecode.
+
+One feature commonly used by Java developers is the use of fields and arrays in Java code.
+%
+Summarizing non-static field accesses requires finding which object a field access belongs to, an operation which
+cannot be computed exactly in a static analysis.
+%
+Instead of summarizing field accesses statically, our interpretation of path-merging for Java code regions computes
+such a summary only when a summary is instantiated by the symbolic executor.
+%
+A further generalization of this problem arises with symbolic index-based accesses into array objects.
+%
+Our interpretation of path-merging supports symbolic indices, by including the possibility of any entry in the array
+being accessed, in the region\rq s summary.
+%
+A couple of other improvements in our path-merging technique include include summaries of methods and supporting
+exceptional behavior in regions.
+
+Not being able to summarize such dynamically dispatch methods can lead to poor performance for
+n\"aive implementations of bounded static regions.
+%
+Thus, to be successful, we must be able to inject the static regions associated with the calls into the dispatching
+region.
+%
+We call such regions {\em higher order} as they require a region as an argument and can return a region that may need
+to be further interpreted.
+%
+In our experiments, we demonstrate exponential speedups on benchmarks (in general, the more paths contained within a
+program, the larger the speedup) over the unmodified Java SPF tool using this approach.
+
+Another common feature of Java code that represents the boundary of path merging is \textit{exceptions}.
+%
+If an exception can potentially be raised in a region, the symbolic executor needs to explore that exceptional behavior.
+%
+But, it is possible for other unexceptional behavior to also exist in the same region.
+%
+For example, it can be in the form of a branch nested inside another branch that raises an exception on the other side.
+%
+Summarizing such unexceptional behavior while simultaneously guiding the symbolic executor towards potential exceptional
+behavior reduces the branching factor of the region.
+%
+We propose a technique named \textit{Single-Path Cases} for splitting a region summary into its exceptional and
+unexceptional parts.
+
+While summarizing higher-order regions and finding single-path cases is useful to improve scalability,
+representing such summaries in an intermediate representation~(IR) that uses static single-assignment~(SSA) form
+provides a few key advantages.
+%
+(1) It allows region summaries to be constructed by using a sequence of transformations, with each transformation
+extending to add support for new features such as heap accesses, higher-order regions, and single-path cases.
+%
+(2) It allows for simplifications such as constant propagation, copy propagation, constant folding to be performed on
+region summaries.
+%
+(3) It makes the construction of region summaries more accessible to users of the symbolic execution tool, thereby making
+path merging more useful to end-users.\\
+%
+In this chapter, we present Java Ranger, an extension of Symbolic PathFinder, that computes such region summaries over a representation we call
+Ranger IR.
+%
+Ranger IR has support for inlining method summaries and for constructing SSA form for heap accesses.
+%
+It also proposes Single-Path Cases as an alternative to multiple transition points as
+defined by Avgerinos et al.~\cite{veritesting}.
+
+
+\subsection{Motivating Example}
+\begin{figure}
+    \includegraphics[width=\widthfactor\textwidth]{chapters/java_ranger/figures/example-combined.pdf}
+    \caption{An example demonstrating the need for using a multi-path region summary}
+    \label{fig:mot-example}
+\end{figure}
+Consider the example of Java code shown in Figure \ref{fig:mot-example}.
+%
+The {\tt list} object refers to an {\tt ArrayList} of 200 {\tt Integer} objects which have an unconstrained symbolic
+integer as a field.
+%
+The checking of each even-indexed entry in {\tt list} introduces a branch, which has both sides feasible, and requires
+symbolic execution to explore two execution paths instead of the one it was at.\\
+%
+Performing this check over the entire {\tt list} makes symbolic execution need $2^{100}$ execution paths to terminate
+(assuming {\tt list} has 200 entries with every even-indexed entry pointing to a new unconstrained symbolic integer).
+%
+A simple way to avoid this path explosion is to merge the two paths arising out of the {\tt i\%2 == 0 \&\& list.get(i) == 42} branch.
+%
+Such path merging requires us to compute a summary of all behaviors arising on both sides of the branch from lines 11 to 13
+until both sides of the branch merge at line 14.
+%
+If we can construct such a summary beforehand, our symbolic executor can instantiate the summary by reading in inputs to
+the summary from the stack and/or the heap, and writing outputs of the summary to the stack and/or the heap.\\
+%
+Unfortunately, constructing such a summary for this simple region from lines 11--13 is not straightforward due to the
+call to {\tt list.get(int)} which is actually a call to {\tt ArrayList<Integer>.get(int)} ({\tt java.util.List<E>.get(int)} is abstract and does not have an implementation).
+%
+{\tt ArrayList<Integer>.get(int)} internally does the following:
+%
+\begin{enumerate}
+\item It checks if the index argument accesses a value within bounds of the {\tt ArrayList} by calling {\tt ArrayList<E>.rangeCheck(int)}. If this access is not within bounds, it throws an exception.
+%
+\item It calls {\tt ArrayList<E>.elementData(int)} to access an internal array named {\tt elementData} and get the entry at position {\tt i}. This call results in an object of class {\tt Integer} being returned.
+%
+\item It calls {\tt Integer.intValue()} on the object returned by the previous step. This call internally accesses the {\tt value} field of {\tt Integer} to return the integer value of this object.
+%
+\end{enumerate}
+
+The static summary of {\tt ArrayList<Integer>.get(int)} needs to not only include summaries of all these three methods but
+also include the possibility of an exception being raised by the included summary of {\tt ArrayList<E>.rangeCheck(i)}.
+%
+Our extension to path-merging includes using method summaries, either with a single return or no return, as part of region summaries that have method calls \footnote{We plan to support methods with multiple returns in the future.}.
+%
+The method whose summary is to be included depends on the dynamic type of the object reference on which the method is being invoked.
+%
+In our example, the dynamic type of {\tt list} is {\tt ArrayList}, whereas it is declared statically as having the type {\tt List}.
+%
+Therefore, the summary of {\tt list.get(i)} pulls in the method summaryof {\tt ArrayList<E>.get(i)}.\\
+%
+Our \textit{Single-Path Cases} extension to path-merging also allows the possibility of exceptional behavior being
+included in the summary and explored separately from unexceptional behavior by performing exploration of exceptional
+behavior in the region on its own execution path.
+%

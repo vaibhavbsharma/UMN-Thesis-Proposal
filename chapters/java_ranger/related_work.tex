@@ -1,0 +1,163 @@
+\section{Related Work}
+\todo[inline]{Rewrite this section in your own words}
+Path explosion is a major cause of scalability limitations for
+symbolic execution, so an appealing direction for optimization is to
+combine the representations of similar execution paths, which we refer
+to generically as {\em path merging.}
+%
+If a symbolic execution tool already concurrently maintains objects
+representing multiple execution states, a natural approach is to merge
+these states, especially ones with the same control-flow location.
+%
+Hansen et al.~\cite{HansenSS2009} explored this technique but found
+mixed results on its benefits.
+%
+Kuznetsov et al.~\cite{kuznetsov} developed new algorithms and
+heuristics to control when to perform such state merging profitably.
+%
+A larger departure in the architecture of symbolic execution systems
+is the MultiSE approach proposed by Sen et al.~\cite{multise}, which
+represents values including the program counter with a two-level
+guarded structure, in which the guard expressions are optimized with
+BDDs.
+%
+The MultiSE approach achieves effects similar to state merging
+automatically, and provides some architectural advantages such as in
+representing values that are not supported by the SMT solver.
+
+Another approach to achieve path merging is to statically summarize
+regions that contain branching control flow.
+%
+This approach was proposed by Avgerinos et al.~\cite{veritesting} and
+dubbed ``veritesting'' because it pushes symbolic execution further
+along a continuum towards all-paths techniques used in verification.
+%
+A veritesting-style technique is a convenient way to add path merging
+to a symbolic execution system that maintains only one execution
+state, which is one reason we chose it when extending SPF.
+%
+Avgerinos et al. designed and implemented their veritesting system
+MergePoint for the application of binary-level symbolic execution for
+bug finding.
+%
+They found that veritesting provided a dramatic performance
+improvement, allowing their system to find more bugs and have better
+node and path coverage in a given exploration time.
+%
+The static regions used by MergePoint are intra-procedural, but they
+can have any number of ``transition points'' at which control can be
+returned to regular symbolic execution.
+%
+Avgerinos et al. do not provide details about how MergePoint
+represents memory accesses or integrates them with veritesting, though
+since MergePoint was built as an extension of the same authors' Mayhem
+system, it may reuse techniques such as symbolic representation of
+loads from bounded memory regions~\cite{mayhem}.
+
+The veritesting approach has been integrated with another binary level
+symbolic execution engine named {\tt angr}~\cite{angr}.
+%
+However angr's authors found that their veritesting implementation did
+not provide an overall improvement over their dynamic symbolic
+execution baseline: though veritesting allowed some new crashes to be
+found, they observed that giving more complex symbolic expressions
+slowed down the SMT solver enough that total performance was degraded.
+%
+We have also observed complex expressions to be a potential cost of
+veritesting, but we believe that optimizations of the SMT solver
+interface and potentially heuristics to choose when to use static
+regions can allow them to be a net asset.
+
+The way that \tool\ and similar tools statically convert code
+regions into formulas is similar to techniques used in verification.
+%
+In the limit where all relevant code in a program can be
+summarized, such as with WBS and TCAS-SR in Section~\ref{sec:results},
+\tool\ performs similarly to a bounded symbolic model checker for
+Java.
+%
+SPF and \tool\ build on Java Pathfinder (JPF)~\cite{jpf}, which is
+widely used for explicit-state model checking of Java and provides
+core infrastructure for instrumentation and state backtracking.
+%
+Another family of Java analysis tools that use formula translation
+(also called verification condition generation) are
+ESC/Java~\cite{FlanaganLLNSS2002}, ESC/Java2~\cite{CokK2004}, and
+OpenJML~\cite{Cok2011}, though these tools target static error
+checking and verification of annotated specifications.
+
+Perhaps the most closely related Java model checking tool is
+JBMC~\cite{CordeiroKKST2018}, which has recently been built sharing
+infrastructure with the similar C tool CBMC.
+%
+JBMC performs symbolic bounded model checking of Java code,
+transforming code and a supported subset of the standard library into
+SMT or SAT formulas that represent all possible execution paths.
+%
+(The process by which JBMC transforms its internal code representation
+into SMT formulas is sometimes described as (static) symbolic
+execution, but it has more in common with how \tool\ constructs static
+regions than with the symbolic execution that vanilla SPF performs.)
+%
+In cases that \tool\ can completely summarize, we would expect its
+performance to be comparable to JBMC's; an experimental comparison is
+future work.
+%
+But static region summaries are more important as an optimization to
+speed up symbolic execution on software that is too large and/or
+complex to be explored exhaustively.
+
+A wide variety of other enhancements to symbolic execution have been
+proposed to improve its performance, including caching and simplifying
+constraints, summarizing repetitive behavior in loops, heuristic
+guidance towards interesting code, pruning paths that are repetitive
+or unproductive, and many domain-specific ideas.
+%
+A recent survey by Baldoni et. al.~\cite{SurveySymExec-CSUR18}
+provides pointers into the large literature.
+%
+One approach that is most related to our higher-order static regions
+is the function-level compositional approach called SMART proposed by
+Godefroid~\cite{Godefroid2007}.
+%
+Like \tool's function summaries, SMART summarizes the behavior of a
+function in isolation from its calling context so that the summary can
+be reused at points where the function is used.
+%
+But SMART uses single-path symbolic execution to compute its
+summaries, whereas \tool\ uses static analysis: this makes \tool's
+summary more compact at the expense of requiring more reasoning by the
+SMT solver.
+%
+Because SMART was implemented for C, it does not address dynamic
+dispatch between multiple call targets.
+
+
+% %Talk about other symbolic execution performance improvements.
+% %mentioned in Christopher Kruegel's ISSTA keynote talk as Static Analysis support
+% Other static analysis techniques also provide support for dynamic symbolic execution.
+% %
+% Loop-extended symbolic execution introduced partial loop summarization by having symbolic variables that represent the number of times each loop executes.
+% %
+% This technique allowed symbolic variables to incorporate loop dependent effects along with data dependencies from program inputs.
+%
+%Value Set Analysis~\cite{vsa} is another static analysis technique that can potentially benefit dynamic symbolic execution.
+%%
+%Value set analysis uses an abstract domain to find an over-approximated set of values that registers or abstract locations may have at program points.
+%%
+%Value set analysis can help dynamic symbolic execution resolve ranges without solving constraints.
+%VSA can resolve ranges without solving constraints, thereby, finding applications in computing all possible write targets during a memory write operation.
+%Code summarization (Dodo)
+%  - automatically (and statically) summarize effect of loops / functions
+%VSA - value set analysis
+%  - resolve ranges (and conditionals) without solving constraints
+
+%Talk about TamiFlex, and how using the same technique as TamiFlex is one way to solve veritesting challenges in Java bytecode.
+%
+%Other techniques for static analysis at the Java bytecode level can also benefit dynamic symbolic execution.
+%
+%Finding which reflective method call is being used, or handling dynamic class loading are known problems for static analysis tools.
+%
+%TamiFlex~\cite{tamiflex} provides an answer that is sound with respect to a set of previously seen program runs.
+%
+%Integrating veritesting runs into similar problems, and using techniques from TamiFlex would allow static predicate construction beyond exit points caused by reflection or dynamic class loading. 

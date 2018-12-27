@@ -37,7 +37,7 @@
 preliminaries/title,
 chapters/adapter_synthesis,
 chapters/path_merging_connection,
-chapters/path_merging,
+chapters/java_ranger,
 chapters/program_repair,
 chapters/conclusion,
 %chapters/app_glossary,
@@ -74,6 +74,16 @@ chapters/conclusion,
 \input{my_definitions}
 %end adapter_synthesis preamble
 
+%begin Java Ranger preamble
+\usepackage{booktabs} % For formal tables
+\usepackage{listings}
+\usepackage{url}
+\usepackage{color}
+\usepackage{authblk}
+\usepackage{graphicx}
+\usepackage{subcaption}
+\captionsetup{compatibility=false}
+%end Java Ranger preamble
 
 
 \begin{document}
@@ -96,7 +106,7 @@ chapters/conclusion,
 \include{chapters/path_merging_connection}
 
 %Software Chapters
-\include{chapters/path_merging}
+\include{chapters/java_ranger}
 \include{chapters/program_repair}
 
 %Analysis Chapters
@@ -112,7 +122,7 @@ chapters/conclusion,
 % Bibliography
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %\bibliography{thesis}
-\bibliography{chapters/adapter_synthesis/references}
+\bibliography{chapters/adapter_synthesis/references,chapters/java_ranger/references}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
