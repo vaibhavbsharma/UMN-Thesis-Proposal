@@ -1,5 +1,83 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % abstract.tex: Abstract
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-Abstract
+% Abstract
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+Independently developed codebases typically contain many segments of
+code that perform same or closely related operations (semantic
+clones). Finding functionally equivalent segments enables applications
+like replacing a segment by a more efficient or more secure
+alternative. Such related segments often have different interfaces, so
+some glue code (an adapter) is needed to replace one with the other.
+We present an algorithm that searches for replaceable code segments by
+attempting to synthesize an adapter between them from some finite family of
+adapters; it terminates if it finds no possible adapter. In the first part of this report, we compare binary symbolic
+execution-based adapter search with concrete adapter enumeration based on Intel's
+Pin framework, and explore the relation
+between size of adapter search space and total search time. We present
+examples of applying adapter synthesis for improving security of
+binary functions and switching between binary implementations of RC4.
+We present two large-scale evaluations: (1) we run adapter synthesis on more
+than 13,000 function pairs from the Linux C library, and (2) we
+reverse engineer fragments of ARM binary code by running more than a
+million adapter synthesis tasks. Our results confirm that several
+instances of adaptably equivalent binary functions exist in real-world
+code, and suggest that adapter synthesis can be applied for automatically replacing binary code with its
+adaptably equivalent variants.
+
+The use of symbolic execution during adapter search implicitly relies on being able to summarize the entire
+adapter into a single formula.
+%
+Summarizing multiple execution paths into a single path is done using path-merging techniques in symbolic execution.
+%
+Merging related execution paths is a powerful technique for reducing
+path explosion in symbolic execution.
+%
+One approach, introduced and dubbed ``veritesting'' by Avgerinos et
+al., works by statically translating a bounded control flow region
+into a single formula.
+%
+This approach is a convenient way to achieve path merging as a
+modification to a pre-existing single-path symbolic execution engine.
+%
+Avgerinos et al. evaluated their approach in a symbolic execution tool
+for binary code, but different design considerations apply when
+building tools for other languages.
+%
+In the second part of this report, we explore the best way to use a veritesting approach in
+the symbolic execution of Java.
+%
+Because Java code typically contains many small dynamically dispatched
+methods, it is important to include them in multi-path regions; we
+introduce a {\em higher-order} path-merging technique to do so
+modularly.
+%
+Java's typed memory structure is very different from a binary, but we
+show how the idea of static single assignment (SSA) form can be
+applied to object references to statically account for aliasing.
+%
+We extend path merging to summarize multiple exit points that return control flow from a multi-path region
+into a single such exit point.
+%More formally, we describe our veritesting algorithms as
+%syntax-directed transformations of a structured intermediate
+%representation, which highlights their logical structure.
+%
+We have implemented our algorithms in Java Ranger, an extension to the
+widely used Symbolic Pathfinder tool for Java bytecode.
+%
+Our empirical evaluation shows that Java Ranger greatly reduces the
+search space of Java symbolic execution benchmarks with its expanded
+path-merging capabilities providing a significant improvement.
+
+Bugs in commercial software and third-party components are an undesirable and expensive phenomenon.
+%
+Such software is usually released to users only in binary form.
+%
+The lack of source code renders users of such software dependent on their software vendors for repairs of bugs.
+%
+Such dependence is even more harmful if the bugs introduce new vulnerabilities in the software.
+%
+Being able to automatically repair security and functionality bugs breaks this dependence and increases software robustness.
+%
+In the third part of this report, I will propose development of a binary program repair tool that uses
+existing bug-free fragments of code to repair buggy code.
